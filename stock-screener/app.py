@@ -275,7 +275,7 @@ if df is not None:
 
         styled = (
             df.style
-            .applymap(dist_colour, subset=["200 DMA Dist %"])
+            .map(dist_colour, subset=["200 DMA Dist %"])
             .format(
                 {
                     "CMP (₹)"        : "₹{:.2f}",
