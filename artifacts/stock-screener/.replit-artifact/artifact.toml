@@ -13,6 +13,20 @@ localPort = 8099
 [services.development]
 run = "cd /home/runner/workspace/stock-screener && streamlit run app.py --server.port 8099"
 
+[services.production]
+
+[services.production.build]
+args = ["pip", "install", "-r", "stock-screener/requirements.txt"]
+
+[services.production.run]
+args = ["streamlit", "run", "stock-screener/app.py", "--server.port", "8099", "--server.headless", "true", "--server.enableCORS", "false", "--server.enableXsrfProtection", "false"]
+
+[services.production.run.env]
+PORT = "8099"
+
+[services.production.health.startup]
+path = "/_stcore/health"
+
 [services.env]
 PORT = "8099"
 BASE_PATH = "/"
