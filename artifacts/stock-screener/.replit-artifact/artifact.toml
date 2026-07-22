@@ -1,0 +1,18 @@
+kind = "web"
+previewPath = "/"
+title = "Stock Screener"
+version = "1.0.0"
+id = "artifacts/stock-screener"
+router = "path"
+
+[[services]]
+name = "web"
+paths = [ "/" ]
+localPort = 8099
+
+[services.development]
+run = "cd /home/runner/workspace/stock-screener && streamlit run app.py --server.port 8099"
+
+[services.env]
+PORT = "8099"
+BASE_PATH = "/"
