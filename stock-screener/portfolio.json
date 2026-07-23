@@ -1,0 +1,36 @@
+{
+  "initial_balance": 1000000,
+  "balance": 916846.0,
+  "trades": [
+    {
+      "id": "0b44c38e",
+      "ticker": "ETERNAL.NS",
+      "stock": "ETERNAL",
+      "action": "BUY",
+      "qty": 100,
+      "price": 284.4,
+      "value": 28440.0,
+      "timestamp": "22-07-2026 10:29"
+    },
+    {
+      "id": "f5856042",
+      "ticker": "NHPC.NS",
+      "stock": "NHPC",
+      "action": "BUY",
+      "qty": 200,
+      "price": 80.28,
+      "value": 16056.0,
+      "timestamp": "22-07-2026 10:30"
+    },
+    {
+      "id": "8cd4e87e",
+      "ticker": "RELIANCE.NS",
+      "stock": "RELIANCE",
+      "action": "BUY",
+      "qty": 30,
+      "price": 1288.6,
+      "value": 38658.0,
+      "timestamp": "22-07-2026 10:33"
+    }
+  ]
+}
