@@ -349,12 +349,6 @@ inject_css(P)
 # ══════════════════════════════════════════════════════════════════════════════
 # AUTH
 # ══════════════════════════════════════════════════════════════════════════════
-def check_cookie_auth() -> bool:
-    try:
-        return cookies.get(COOKIE_AUTH) == COOKIE_TOKEN
-    except Exception:
-        return False
-
 def do_login(username: str, password: str, remember: bool) -> bool:
     if username.strip() == ADMIN_USERNAME and password == ADMIN_PASSWORD:
         st.session_state.authenticated = True
@@ -372,8 +366,20 @@ def do_logout():
     except Exception:
         pass
 
+# Read the cookie on every render — it returns None on the very first render
+# (JS bridge hasn't fired yet) and the real value on every subsequent rerun.
+_auth_cookie = cookies.get(COOKIE_AUTH)
+
+# If cookie is valid but session says unauthenticated → promote immediately.
+# This is what makes "Remember me" work on page refresh:
+#   Render 1 → cookie = None → authenticated = False → login shown
+#   Cookie component fires → Streamlit reruns
+#   Render 2 → cookie = TOKEN → this block runs → authenticated = True → dashboard shown
+if _auth_cookie == COOKIE_TOKEN and not st.session_state.get("authenticated", False):
+    st.session_state.authenticated = True
+
 if "authenticated" not in st.session_state:
-    st.session_state.authenticated = check_cookie_auth()
+    st.session_state.authenticated = False
 
 # ── LOGIN PAGE ─────────────────────────────────────────────────────────────────
 if not st.session_state.authenticated:
