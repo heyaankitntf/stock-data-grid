@@ -4,7 +4,9 @@ import uuid
 import warnings
 import logging
 import hashlib
-from datetime import datetime
+from datetime import datetime, timezone, timedelta
+
+IST = timezone(timedelta(hours=5, minutes=30))
 from pathlib import Path
 
 import pandas as pd
@@ -188,7 +190,7 @@ def execute_trade(ticker: str, stock: str, action: str, qty: int, price: float) 
         "qty":       qty,
         "price":     price,
         "value":     round(value, 2),
-        "timestamp": datetime.now().strftime("%d-%m-%Y %H:%M"),
+        "timestamp": datetime.now(IST).strftime("%d-%m-%Y %H:%M"),
     })
     save_portfolio(port)
     return True, f"{action} {qty} × {stock} @ ₹{price:,.2f} → ₹{value:,.0f}"
@@ -530,7 +532,7 @@ with tab_scanner:
             car_rising = car_data.expanding().mean().tail(10).is_monotonic_increasing
             if cmp > dma_30 and cmp > dma_50 and cmp > dma_200 and car_rising:
                 return {
-                    "Date": datetime.now().strftime("%d-%m-%Y"),
+                    "Date": datetime.now(IST).strftime("%d-%m-%Y"),
                     "Stock": ticker.replace(".NS", ""),
                     "CMP (₹)": round(float(cmp), 2),
                     "30 DMA": round(float(dma_30), 2),
@@ -573,7 +575,7 @@ with tab_scanner:
             pbar.progress(1.0)
             status.empty()
             st.session_state.df_results = df
-            st.session_state.last_scan  = datetime.now().strftime("%d-%m-%Y  %H:%M")
+            st.session_state.last_scan  = datetime.now(IST).strftime("%d-%m-%Y  %H:%M")
             st.rerun()
 
     df = st.session_state.df_results
@@ -616,7 +618,7 @@ with tab_scanner:
             st.dataframe(styled, use_container_width=True, height=min(80 + n * 38, 680))
             st.download_button(
                 label="⬇️  Download Excel", data=to_excel(df),
-                file_name=f"Breakout_Stocks_{datetime.now().strftime('%d-%m-%Y')}.xlsx",
+                file_name=f"Breakout_Stocks_{datetime.now(IST).strftime('%d-%m-%Y')}.xlsx",
                 mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
             )
     elif not trigger:
@@ -779,7 +781,7 @@ with tab_trading:
                     "price":  price,
                     "qty":    qty,
                     "action": action,
-                    "ts":     datetime.now().strftime("%H:%M:%S"),
+                    "ts":     datetime.now(IST).strftime("%H:%M:%S"),
                 }
             else:
                 st.error("Could not fetch price. Check ticker or try again.")
@@ -879,7 +881,7 @@ with tab_trading:
             st.download_button(
                 label="⬇️ Export Trade History",
                 data=hist_df.to_csv(index=False).encode(),
-                file_name=f"Trade_History_{datetime.now().strftime('%d-%m-%Y')}.csv",
+                file_name=f"Trade_History_{datetime.now(IST).strftime('%d-%m-%Y')}.csv",
                 mime="text/csv",
             )
 
