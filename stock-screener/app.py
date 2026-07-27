@@ -1,16 +1,18 @@
 import io
 import json
-import secrets
+import uuid
 import warnings
 import logging
+import hashlib
 from datetime import datetime, timezone, timedelta
+
+IST = timezone(timedelta(hours=5, minutes=30))
 from pathlib import Path
 
 import pandas as pd
 import streamlit as st
 import yfinance as yf
-
-IST = timezone(timedelta(hours=5, minutes=30))
+from streamlit_cookies_controller import CookieController
 
 # ── Silence noisy loggers ──────────────────────────────────────────────────────
 logging.getLogger("yfinance").setLevel(logging.CRITICAL)
@@ -25,63 +27,17 @@ st.set_page_config(
 )
 
 # ── Constants ──────────────────────────────────────────────────────────────────
-ADMIN_USERNAME    = "admin"
-ADMIN_PASSWORD    = "admin123"
-BASE_DIR          = Path(__file__).parent
-SETTINGS_FILE     = BASE_DIR / "settings.json"
-PORTFOLIO_FILE    = BASE_DIR / "portfolio.json"
-SESSIONS_FILE     = BASE_DIR / "sessions.json"
-THEME_FILE        = BASE_DIR / "theme.json"
-INITIAL_BALANCE   = 1_000_000   # ₹10,00,000 virtual capital
-SESSION_EXPIRY_S  = 30 * 24 * 3600  # 30 days
+ADMIN_USERNAME  = "admin"
+ADMIN_PASSWORD  = "admin123"
+COOKIE_AUTH     = "screener_auth_v1"
+COOKIE_THEME    = "screener_theme_v1"
+COOKIE_TOKEN    = hashlib.sha256(b"screener_admin_nilesh_2026").hexdigest()
+SETTINGS_FILE   = Path(__file__).parent / "settings.json"
+PORTFOLIO_FILE  = Path(__file__).parent / "portfolio.json"
+INITIAL_BALANCE = 1_000_000   # ₹10,00,000 virtual capital
 
-# ── Server-side session helpers ────────────────────────────────────────────────
-def _load_sessions() -> dict:
-    try:
-        return json.loads(SESSIONS_FILE.read_text()) if SESSIONS_FILE.exists() else {}
-    except Exception:
-        return {}
-
-def _save_sessions(s: dict):
-    SESSIONS_FILE.write_text(json.dumps(s))
-
-def create_session() -> str:
-    token = secrets.token_urlsafe(32)
-    now   = datetime.now(IST).timestamp()
-    s     = {k: v for k, v in _load_sessions().items() if v.get("expires", 0) > now}
-    s[token] = {"user": ADMIN_USERNAME, "expires": now + SESSION_EXPIRY_S}
-    _save_sessions(s)
-    return token
-
-def validate_session(token: str) -> bool:
-    if not token:
-        return False
-    s    = _load_sessions()
-    sess = s.get(token)
-    if not sess:
-        return False
-    if sess.get("expires", 0) < datetime.now(IST).timestamp():
-        s.pop(token, None)
-        _save_sessions(s)
-        return False
-    return True
-
-def delete_session(token: str):
-    if not token:
-        return
-    s = _load_sessions()
-    s.pop(token, None)
-    _save_sessions(s)
-
-# ── Theme persistence (file-based, no cookies) ─────────────────────────────────
-def load_theme() -> str:
-    try:
-        return json.loads(THEME_FILE.read_text()).get("theme", "dark") if THEME_FILE.exists() else "dark"
-    except Exception:
-        return "dark"
-
-def save_theme(t: str):
-    THEME_FILE.write_text(json.dumps({"theme": t}))
+# ── Cookie controller ──────────────────────────────────────────────────────────
+cookies = CookieController()
 
 # ══════════════════════════════════════════════════════════════════════════════
 # THEME PALETTES
@@ -385,7 +341,7 @@ hr {{ border-color:{p['border']} !important; opacity:.6; }}
 # THEME BOOTSTRAP
 # ══════════════════════════════════════════════════════════════════════════════
 if "theme" not in st.session_state:
-    saved = load_theme()
+    saved = cookies.get(COOKIE_THEME)
     st.session_state.theme = saved if saved in PALETTES else "dark"
 
 P = PALETTES[st.session_state.theme]
@@ -399,32 +355,33 @@ def do_login(username: str, password: str, remember: bool) -> bool:
     if username.strip() == ADMIN_USERNAME and password == ADMIN_PASSWORD:
         st.session_state.authenticated = True
         if remember:
-            token = create_session()
-            st.session_state.auth_token = token
-            st.query_params["auth"] = token
-        else:
-            st.session_state.auth_token = ""
+            cookies.set(COOKIE_AUTH, COOKIE_TOKEN, max_age=30 * 24 * 3600)
         return True
     return False
 
 def do_logout():
-    delete_session(st.session_state.get("auth_token", ""))
-    for k in ("authenticated", "auth_token", "df_results", "last_scan",
-              "scanned", "trade_preview", "portfolio_prices"):
+    for k in ("authenticated", "df_results", "last_scan", "scanned",
+              "trade_preview", "portfolio_prices"):
         st.session_state.pop(k, None)
-    st.query_params.clear()
+    try:
+        cookies.remove(COOKIE_AUTH)
+    except Exception:
+        pass
 
-# ── Auth check on every page load ─────────────────────────────────────────────
-# With "Remember me": URL contains ?auth=TOKEN → validated against sessions.json
-# Without "Remember me": session state only → logout on tab close / refresh (expected)
+# Read the cookie on every render — it returns None on the very first render
+# (JS bridge hasn't fired yet) and the real value on every subsequent rerun.
+_auth_cookie = cookies.get(COOKIE_AUTH)
+
+# If cookie is valid but session says unauthenticated → promote immediately.
+# This is what makes "Remember me" work on page refresh:
+#   Render 1 → cookie = None → authenticated = False → login shown
+#   Cookie component fires → Streamlit reruns
+#   Render 2 → cookie = TOKEN → this block runs → authenticated = True → dashboard shown
+if _auth_cookie == COOKIE_TOKEN and not st.session_state.get("authenticated", False):
+    st.session_state.authenticated = True
+
 if "authenticated" not in st.session_state:
-    _token = st.query_params.get("auth", "")
-    if _token and validate_session(_token):
-        st.session_state.authenticated = True
-        st.session_state.auth_token    = _token
-    else:
-        st.session_state.authenticated = False
-        st.session_state.auth_token    = ""
+    st.session_state.authenticated = False
 
 # ── LOGIN PAGE ─────────────────────────────────────────────────────────────────
 if not st.session_state.authenticated:
@@ -498,7 +455,7 @@ with st.sidebar:
     )
     if chosen_theme != st.session_state.theme:
         st.session_state.theme = chosen_theme
-        save_theme(chosen_theme)
+        cookies.set(COOKIE_THEME, chosen_theme, max_age=365 * 24 * 3600)
         st.rerun()
 
     st.divider()
