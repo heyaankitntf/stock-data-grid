@@ -4,9 +4,7 @@ import uuid
 import warnings
 import logging
 import hashlib
-from datetime import datetime, timezone, timedelta
-
-IST = timezone(timedelta(hours=5, minutes=30))
+from datetime import datetime
 from pathlib import Path
 
 import pandas as pd
@@ -190,7 +188,7 @@ def execute_trade(ticker: str, stock: str, action: str, qty: int, price: float) 
         "qty":       qty,
         "price":     price,
         "value":     round(value, 2),
-        "timestamp": datetime.now(IST).strftime("%d-%m-%Y %H:%M"),
+        "timestamp": datetime.now().strftime("%d-%m-%Y %H:%M"),
     })
     save_portfolio(port)
     return True, f"{action} {qty} × {stock} @ ₹{price:,.2f} → ₹{value:,.0f}"
@@ -351,6 +349,12 @@ inject_css(P)
 # ══════════════════════════════════════════════════════════════════════════════
 # AUTH
 # ══════════════════════════════════════════════════════════════════════════════
+def check_cookie_auth() -> bool:
+    try:
+        return cookies.get(COOKIE_AUTH) == COOKIE_TOKEN
+    except Exception:
+        return False
+
 def do_login(username: str, password: str, remember: bool) -> bool:
     if username.strip() == ADMIN_USERNAME and password == ADMIN_PASSWORD:
         st.session_state.authenticated = True
@@ -368,20 +372,8 @@ def do_logout():
     except Exception:
         pass
 
-# Read the cookie on every render — it returns None on the very first render
-# (JS bridge hasn't fired yet) and the real value on every subsequent rerun.
-_auth_cookie = cookies.get(COOKIE_AUTH)
-
-# If cookie is valid but session says unauthenticated → promote immediately.
-# This is what makes "Remember me" work on page refresh:
-#   Render 1 → cookie = None → authenticated = False → login shown
-#   Cookie component fires → Streamlit reruns
-#   Render 2 → cookie = TOKEN → this block runs → authenticated = True → dashboard shown
-if _auth_cookie == COOKIE_TOKEN and not st.session_state.get("authenticated", False):
-    st.session_state.authenticated = True
-
 if "authenticated" not in st.session_state:
-    st.session_state.authenticated = False
+    st.session_state.authenticated = check_cookie_auth()
 
 # ── LOGIN PAGE ─────────────────────────────────────────────────────────────────
 if not st.session_state.authenticated:
@@ -532,7 +524,7 @@ with tab_scanner:
             car_rising = car_data.expanding().mean().tail(10).is_monotonic_increasing
             if cmp > dma_30 and cmp > dma_50 and cmp > dma_200 and car_rising:
                 return {
-                    "Date": datetime.now(IST).strftime("%d-%m-%Y"),
+                    "Date": datetime.now().strftime("%d-%m-%Y"),
                     "Stock": ticker.replace(".NS", ""),
                     "CMP (₹)": round(float(cmp), 2),
                     "30 DMA": round(float(dma_30), 2),
@@ -575,7 +567,7 @@ with tab_scanner:
             pbar.progress(1.0)
             status.empty()
             st.session_state.df_results = df
-            st.session_state.last_scan  = datetime.now(IST).strftime("%d-%m-%Y  %H:%M")
+            st.session_state.last_scan  = datetime.now().strftime("%d-%m-%Y  %H:%M")
             st.rerun()
 
     df = st.session_state.df_results
@@ -618,7 +610,7 @@ with tab_scanner:
             st.dataframe(styled, use_container_width=True, height=min(80 + n * 38, 680))
             st.download_button(
                 label="⬇️  Download Excel", data=to_excel(df),
-                file_name=f"Breakout_Stocks_{datetime.now(IST).strftime('%d-%m-%Y')}.xlsx",
+                file_name=f"Breakout_Stocks_{datetime.now().strftime('%d-%m-%Y')}.xlsx",
                 mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
             )
     elif not trigger:
@@ -781,7 +773,7 @@ with tab_trading:
                     "price":  price,
                     "qty":    qty,
                     "action": action,
-                    "ts":     datetime.now(IST).strftime("%H:%M:%S"),
+                    "ts":     datetime.now().strftime("%H:%M:%S"),
                 }
             else:
                 st.error("Could not fetch price. Check ticker or try again.")
@@ -881,7 +873,7 @@ with tab_trading:
             st.download_button(
                 label="⬇️ Export Trade History",
                 data=hist_df.to_csv(index=False).encode(),
-                file_name=f"Trade_History_{datetime.now(IST).strftime('%d-%m-%Y')}.csv",
+                file_name=f"Trade_History_{datetime.now().strftime('%d-%m-%Y')}.csv",
                 mime="text/csv",
             )
 
