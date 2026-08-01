@@ -865,7 +865,7 @@ with tab_scanner:
         return df
 
     MY_STOCKS = load_stocks()
-    
+
     # Single button - no conditional rendering to prevent layout shift
     run_btn = st.button(
         "🚀 Run the Scanner" if st.session_state.df_results is None else "🔄 Run Scanner Again",
@@ -873,19 +873,29 @@ with tab_scanner:
         type="primary",
         key="scanner_btn"
     )
-    
-    # Clear results when "Run Again" clicked
+
+    # When "Run Again" is clicked, clear cached results so the scan block
+    # below re-runs in THIS script run. We intentionally do NOT call
+    # st.rerun() here — calling st.rerun() after a long-running operation
+    # (the scan) causes Streamlit's frontend to briefly show BOTH the old
+    # render (scanning UI) and the new render (results UI) at the same time,
+    # which is the "duplicate elements for a flash second" bug.
     if run_btn and st.session_state.df_results is not None:
         st.session_state.df_results = None
-        st.rerun()
-    
-    trigger = run_btn  # Only run when button is clicked
+        st.session_state.last_scan  = None
 
-    if trigger:
+    # IMPORTANT: only scan when the user explicitly clicks the button.
+    # Previously this was `trigger = run_btn or (not st.session_state.scanned)`,
+    # which auto-triggered a scan on every page refresh (because session_state
+    # is cleared on hard refresh). Combined with the st.rerun() call below,
+    # this caused a brief flash where the OLD render (tabs + "Scanning..."
+    # message) was still visible while the NEW render (results) painted on
+    # top — producing visibly duplicated tabs and buttons for ~1 frame.
+    # Now: refresh only re-renders from cache; scanning is opt-in.
+    if run_btn:
         if not MY_STOCKS:
             st.warning("⚠️ No stocks configured — add symbols in the sidebar.")
         else:
-            st.session_state.scanned = True
             st.markdown(f"#### ⏳ Scanning {len(MY_STOCKS)} stocks — please wait…")
             pbar   = st.progress(0)
             status = st.empty()
@@ -894,7 +904,10 @@ with tab_scanner:
             status.empty()
             st.session_state.df_results = df
             st.session_state.last_scan  = datetime.now().strftime("%d-%m-%Y  %H:%M")
-            st.rerun()
+            st.session_state.scanned    = True
+            # NOTE: no st.rerun() here. Rendering the results inline in the
+            # same script run avoids the duplicate-render flash that
+            # st.rerun() causes when a long-running operation precedes it.
 
     df = st.session_state.df_results
     if df is not None:
@@ -939,6 +952,10 @@ with tab_scanner:
                 file_name=f"Breakout_Stocks_{datetime.now().strftime('%d-%m-%Y')}.xlsx",
                 mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
             )
+    elif not run_btn:
+        # Show this hint only when the user hasn't clicked Run yet AND there
+        # are no cached results to display.
+        st.info("Open the sidebar (☰) and tap **Run Full Scan** to begin.", icon="👈")
 
 
 # ════════════════════════════════════════════════════════════════════════
