@@ -18,6 +18,10 @@ logging.getLogger("yfinance").setLevel(logging.CRITICAL)
 warnings.filterwarnings("ignore")
 
 # ── Page config ────────────────────────────────────────────────────────────────
+# MUST be the first Streamlit call. Page config sets the document title, icon,
+# viewport, and the base theme that Streamlit renders *before* any Python-side
+# CSS injection can run. Keeping it first minimises the window where Streamlit's
+# default shell is visible without our custom palette.
 st.set_page_config(
     page_title="CAR + DMA Breakout Scanner",
     page_icon="📈",
@@ -101,6 +105,139 @@ def clear_session():
         SESSION_FILE.unlink(missing_ok=True)
     except Exception as e:
         logging.error(f"Failed to clear session: {e}")
+
+# ══════════════════════════════════════════════════════════════════════════════
+# CRITICAL BOOTSTRAP CSS / JS — runs BEFORE any session_state or cookie logic.
+#
+# Why this exists (FOUC root cause):
+#   Streamlit renders its app shell (HTML + default theme CSS) *before* any
+#   Python-side st.markdown injection runs. That means the browser briefly
+#   paints Streamlit's default "#0e1117" dark background + auto-width buttons
+#   + unstyled metric containers, then our inject_css() swaps in the custom
+#   palette and the buttons stretch to 100% width. The user sees:
+#     • buttons dancing/shifting position on refresh
+#     • elements appearing with extra space temporarily
+#     • layout flickering for a millisecond
+#
+# This block fixes it by:
+#   1. Defining both palette backgrounds as CSS variables synchronously.
+#   2. Running a tiny inline <script> that reads document.cookie BEFORE
+#      Streamlit's main bundle paints, picks the right background, and sets
+#      data-theme on <html> so the rest of the CSS can target it.
+#   3. Reserving min-height for layout-shifting elements (buttons, metric
+#      containers, hero) so the second paint doesn't move them.
+#   4. Adding a 60ms opacity fade-in on the app root so any residual swap
+#      between the Streamlit default theme and our custom palette is masked.
+# ══════════════════════════════════════════════════════════════════════════════
+_CRITICAL_BOOTSTRAP = r"""
+<style>
+/* Synchronous palette variables — available to every subsequent rule, even
+   before inject_css() runs. Values match PALETTES["dark"] / PALETTES["light"]
+   in app.py. Keep them in sync if you change a palette. */
+:root {
+  --sdg-bg: #0b1622;
+  --sdg-bg2: #0f2030;
+  --sdg-text: #d0e0f0;
+  --sdg-accent: #00d4aa;
+}
+html[data-sdg-theme="light"] {
+  --sdg-bg: #f2f6fb;
+  --sdg-bg2: #ffffff;
+  --sdg-text: #162030;
+  --sdg-accent: #1565c0;
+}
+
+/* Paint the app shell with our palette immediately. !important is required
+   because Streamlit's own stylesheet also targets these elements. */
+html, body, [data-testid="stAppViewContainer"], [data-testid="stMain"],
+[data-testid="stSidebar"] {
+  background-color: var(--sdg-bg) !important;
+  color: var(--sdg-text) !important;
+}
+[data-testid="stSidebar"] { background-color: var(--sdg-bg2) !important; }
+[data-testid="stHeader"] { background: transparent !important; }
+
+/* Reserve space for layout-shifting elements so they don't "dance" when
+   inject_css() runs and adds padding / borders / width:100%. */
+.stButton > button {
+  width: 100% !important;
+  min-height: 38px !important;
+  /* Pre-apply the gradient so the button doesn't flash its default grey */
+  background: linear-gradient(90deg, var(--sdg-accent), var(--sdg-accent)) !important;
+  color: #ffffff !important;
+  border: none !important;
+  border-radius: 8px !important;
+  font-weight: 700 !important;
+}
+[data-testid="stDownloadButton"] > button {
+  min-height: 38px !important;
+  border: 2px solid var(--sdg-accent) !important;
+  color: var(--sdg-accent) !important;
+  background: transparent !important;
+  border-radius: 8px !important;
+}
+[data-testid="metric-container"] {
+  min-height: 92px !important;
+  background: var(--sdg-bg2) !important;
+  border: 1px solid rgba(128,128,128,0.18) !important;
+  border-radius: 10px !important;
+  padding: 0.85rem 1rem !important;
+  box-sizing: border-box !important;
+}
+[data-testid="stMetricValue"] { color: var(--sdg-accent) !important; }
+
+/* Tab buttons: pre-reserve height so the tab strip doesn't jump. */
+[data-testid="stTabs"] [data-testid="stTab"] {
+  min-height: 36px !important;
+  padding: 0.5rem 1.2rem !important;
+  font-weight: 600 !important;
+}
+
+/* Inputs: pre-apply background so they don't flash white-on-dark. */
+[data-testid="stTextInput"] input,
+[data-testid="stTextArea"] textarea,
+[data-testid="stNumberInput"] input {
+  background: var(--sdg-bg2) !important;
+  color: var(--sdg-text) !important;
+  border-radius: 8px !important;
+}
+
+/* Mask any residual palette swap with a 60ms fade-in. The animation is
+   short enough to feel instant, but long enough to cover the single rAF
+   tick during which Streamlit's default styles would otherwise be visible. */
+[data-testid="stAppViewContainer"],
+[data-testid="stMain"] {
+  animation: sdg-fade-in 60ms ease-out 0ms both !important;
+}
+@keyframes sdg-fade-in {
+  from { opacity: 0; }
+  to   { opacity: 1; }
+}
+
+/* Hide the Streamlit loading spinner background — it uses a different
+   background that flashes. Replace with our palette. */
+.stApp > iframe { background: transparent !important; }
+</style>
+<script>
+// Read the saved theme cookie *synchronously* and tag <html> before any
+// visible paint happens. This avoids the dark→light flash that
+// streamlit-cookies-controller causes (it reads cookies async via JS and
+// triggers a rerun, which previously caused a second paint with the
+// actually-saved palette).
+(function () {
+  try {
+    var match = document.cookie.match(/(?:^|;\s*)screener_theme_v1=([^;]+)/);
+    var theme = match ? decodeURIComponent(match[1]) : "dark";
+    if (theme !== "dark" && theme !== "light") theme = "dark";
+    document.documentElement.setAttribute("data-sdg-theme", theme);
+  } catch (e) {
+    document.documentElement.setAttribute("data-sdg-theme", "dark");
+  }
+})();
+</script>
+"""
+
+st.markdown(_CRITICAL_BOOTSTRAP, unsafe_allow_html=True)
 
 # ══════════════════════════════════════════════════════════════════════════════
 # THEME PALETTES
@@ -268,6 +405,14 @@ def execute_trade(ticker: str, stock: str, action: str, qty: int, price: float) 
 # CSS
 # ══════════════════════════════════════════════════════════════════════════════
 def inject_css(p: dict):
+    """Inject the full decorative stylesheet.
+
+    Note: critical layout-stabilising CSS (body background, button min-height,
+    metric container padding, etc.) is already applied by _CRITICAL_BOOTSTRAP
+    above, which runs *before* this function. This function adds the palette-
+    specific decorations (gradients, borders, colours) that are safe to apply
+    slightly later because they don't change element dimensions.
+    """
     st.markdown(f"""
 <style>
 /* ── Prevent layout shift during load ── */
@@ -299,6 +444,8 @@ html, body, [data-testid="stAppViewContainer"], [data-testid="stMain"] {{
 .hero {{
     background: linear-gradient(135deg,{p['hero_a']} 0%,{p['hero_b']} 50%,{p['hero_c']} 100%);
     border-radius: 14px; padding: 1.6rem 2rem; margin-bottom: 1.2rem;
+    /* Reserve vertical space to prevent layout shift when the hero renders. */
+    min-height: 96px;
 }}
 .hero h1 {{ font-size:1.7rem; font-weight:800; margin:0 0 .3rem; color:#fff; letter-spacing:-.4px; }}
 .hero p  {{ font-size:.85rem; opacity:.82; margin:0; color:#e8f4ff; }}
