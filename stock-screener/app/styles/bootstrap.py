@@ -127,6 +127,42 @@ html, body, [data-testid="stAppViewContainer"], [data-testid="stMain"],
 }
 
 .stApp > iframe { background: transparent !important; }
+
+/* ── Hide Streamlit's production-noise UI elements ──────────────────────────
+   These three elements cause the intermittent "Streamlit server error"
+   scare on mobile:
+
+   1. stStatusWidget — the small floating dot at the top-right that turns
+      red the instant the WebSocket misses one ping cycle. On cellular
+      networks this happens every few minutes, and the dot auto-recovers
+      within 2 seconds, but the user has already seen a red error
+      indicator. The app reconnects transparently, so hiding the dot is
+      strictly better UX.
+
+   2. stMainMenu — the hamburger menu (top-right) with "Rerun / Settings /
+      About / Developer tools". Production users don't need it; the
+      client.toolbarMode = "viewer" config in .streamlit/config.toml
+      already empties most of it, this finishes the job.
+
+   3. stException — when an unhandled exception does slip through, this
+      is the big red box with the stack trace. With showErrorDetails =
+      false in config.toml, the stack trace is already gone; this rule
+      further trims the surrounding chrome so what's left is just the
+      error message text, not a scary full-width red banner.
+*/
+[data-testid="stStatusWidget"] { display: none !important; }
+[data-testid="stMainMenu"] { display: none !important; }
+[data-testid="stException"] {
+    border-left: 3px solid #ff4b4b !important;
+    background: rgba(255, 75, 75, 0.08) !important;
+    padding: 0.6rem 0.9rem !important;
+    border-radius: 6px !important;
+    font-size: 0.85rem !important;
+}
+/* Hide the "Made with Streamlit" footer watermark — production polish. */
+footer[data-testid="stFooter"] { display: none !important; }
+/* Hide the dev-tools "Deploy" button if it slips through. */
+.stDeployButton { display: none !important; }
 </style>
 <script>
 // Read the saved theme cookie *synchronously* and tag <html> before any

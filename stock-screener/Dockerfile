@@ -99,8 +99,12 @@ HEALTHCHECK --interval=30s --timeout=10s --start-period=15s --retries=3 \
 ENTRYPOINT ["/usr/bin/tini", "--", "docker-entrypoint.sh"]
 
 # Default command — run Streamlit.
-# Flags mirror .streamlit/config.toml but are explicit so they apply even
-# if the config file is missing or overridden.
+# Most server/client flags now live in .streamlit/config.toml (which gets
+# copied into the image via `COPY . /app`). We keep --server.port explicit
+# here so `docker run -p 8501:8501` always works even if config.toml is
+# missing or overridden. The other flags are belt-and-suspenders duplicates
+# of config.toml values that are critical for production stability
+# (headless mode, no usage stats).
 CMD ["streamlit", "run", "app.py", \
      "--server.port=8501", \
      "--server.address=0.0.0.0", \
