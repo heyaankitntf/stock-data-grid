@@ -70,7 +70,13 @@ COPY --chown=appuser:appuser . /app
 # ── Persistent data directory ────────────────────────────────────────────────
 # portfolio.json / session.json live here so user data survives container
 # restarts when -v scanner-data:/app/data is used.
-RUN mkdir -p /app/data && chown -R appuser:appuser /app/data
+#
+# IMPORTANT: chown /app itself (not just /app/data). WORKDIR /app above
+# created the directory as root:root, and COPY --chown only chowns the
+# files INSIDE /app, not /app itself. Without this, appuser can't create
+# the /app/portfolio.json symlink at runtime → 'ln: Permission denied'.
+RUN mkdir -p /app/data \
+ && chown -R appuser:appuser /app /app/data
 
 # Symlink the data files into /app/data on first run if they don't exist,
 # so the app's hardcoded paths (APP_DIR/portfolio.json) still resolve.
