@@ -6,6 +6,7 @@ import logging
 import hashlib
 from datetime import datetime
 from pathlib import Path
+from concurrent.futures import ThreadPoolExecutor, as_completed
 
 import pandas as pd
 import streamlit as st
@@ -24,6 +25,38 @@ st.set_page_config(
     initial_sidebar_state="collapsed",
 )
 
+# ── CRITICAL CSS - PREVENTS FOUC (Must be FIRST!) ─────────────────────────────
+st.markdown("""
+<style>
+* {
+    animation-duration: 0s !important;
+    transition-duration: 0s !important;
+}
+html, body, [data-testid="stAppViewContainer"] {
+    visibility: visible !important;
+    opacity: 1 !important;
+    background-color: #0b1622 !important;
+}
+.stButton {
+    min-height: 44px !important;
+}
+[data-testid="stVerticalBlock"] {
+    min-height: 50px !important;
+}
+body {
+    overflow-y: scroll !important;
+}
+[data-testid="stStatusWidget"],
+[data-testid="stApp"]::before {
+    display: none !important;
+}
+.element-container {
+    animation: none !important;
+    transition: none !important;
+}
+</style>
+""", unsafe_allow_html=True)
+
 # ── Constants ──────────────────────────────────────────────────────────────────
 ADMIN_USERNAME  = "admin"
 ADMIN_PASSWORD  = "admin123"
@@ -32,10 +65,42 @@ COOKIE_THEME    = "screener_theme_v1"
 COOKIE_TOKEN    = hashlib.sha256(b"screener_admin_nilesh_2026").hexdigest()
 SETTINGS_FILE   = Path(__file__).parent / "settings.json"
 PORTFOLIO_FILE  = Path(__file__).parent / "portfolio.json"
+SESSION_FILE    = Path(__file__).parent / "session.json"
 INITIAL_BALANCE = 1_000_000   # ₹10,00,000 virtual capital
 
 # ── Cookie controller ──────────────────────────────────────────────────────────
-cookies = CookieController()
+cookies = CookieController(key="cookie_manager")
+
+# ── Session Management (File-based for reliability) ────────────────────────────
+def save_session(token: str, expiry_days: int = 30):
+    """Save session token to file"""
+    from datetime import timedelta
+    try:
+        expiry = (datetime.now() + timedelta(days=expiry_days)).isoformat()
+        SESSION_FILE.write_text(json.dumps({"token": token, "expiry": expiry}))
+    except Exception as e:
+        logging.error(f"Failed to save session: {e}")
+
+def load_session() -> bool:
+    """Check if valid session exists"""
+    try:
+        if not SESSION_FILE.exists():
+            return False
+        data = json.loads(SESSION_FILE.read_text())
+        expiry = datetime.fromisoformat(data.get("expiry", ""))
+        if datetime.now() < expiry and data.get("token") == COOKIE_TOKEN:
+            return True
+        SESSION_FILE.unlink(missing_ok=True)  # Delete expired session
+    except Exception as e:
+        logging.error(f"Failed to load session: {e}")
+    return False
+
+def clear_session():
+    """Clear session file"""
+    try:
+        SESSION_FILE.unlink(missing_ok=True)
+    except Exception as e:
+        logging.error(f"Failed to clear session: {e}")
 
 # ══════════════════════════════════════════════════════════════════════════════
 # THEME PALETTES
@@ -119,8 +184,14 @@ def compute_holdings(trades: list[dict]) -> dict:
             h[tk]["qty"]        += t["qty"]
             h[tk]["total_cost"] += t["qty"] * t["price"]
         elif t["action"] == "SELL":
-            h[tk]["qty"]        -= t["qty"]
-            h[tk]["total_cost"] -= t["qty"] * t["price"]
+            # Proportionally reduce cost when selling (FIFO/Average cost method)
+            if h[tk]["qty"] > 0:
+                avg_cost_per_share = h[tk]["total_cost"] / h[tk]["qty"]
+                h[tk]["qty"]        -= t["qty"]
+                h[tk]["total_cost"] = h[tk]["qty"] * avg_cost_per_share
+            else:
+                h[tk]["qty"] = 0
+                h[tk]["total_cost"] = 0.0
     # Remove zero/negative holdings, compute avg
     return {
         tk: {
@@ -199,6 +270,14 @@ def execute_trade(ticker: str, stock: str, action: str, qty: int, price: float) 
 def inject_css(p: dict):
     st.markdown(f"""
 <style>
+/* ── Prevent layout shift during load ── */
+[data-testid="stAppViewContainer"] {{
+    visibility: visible !important;
+}}
+.block-container {{
+    min-height: 100vh;
+}}
+
 /* ── Global ── */
 html, body, [data-testid="stAppViewContainer"], [data-testid="stMain"] {{
     background-color: {p['bg']} !important; color: {p['text']} !important;
@@ -230,15 +309,22 @@ html, body, [data-testid="stAppViewContainer"], [data-testid="stMain"] {{
 }}
 
 /* ── Tabs ── */
+[data-testid="stTabs"] {{
+    position: relative;
+}}
 [data-testid="stTabs"] [data-testid="stTab"] {{
     font-weight: 600 !important; font-size: .92rem !important;
     padding: .5rem 1.2rem !important; border-radius: 8px 8px 0 0 !important;
+    transition: none !important;
 }}
 [data-testid="stTabs"] [aria-selected="true"] {{
     color: {p['accent']} !important;
     border-bottom: 2px solid {p['accent']} !important;
 }}
-[data-testid="stTabContent"] {{ padding-top: 1.2rem !important; }}
+[data-testid="stTabContent"] {{ 
+    padding-top: 1.2rem !important;
+    min-height: 200px;
+}}
 
 /* ── Metrics ── */
 [data-testid="stMetricLabel"]  {{ color:{p['text_muted']} !important; font-size:.78rem !important; }}
@@ -259,6 +345,7 @@ html, body, [data-testid="stAppViewContainer"], [data-testid="stMain"] {{
     background: linear-gradient(90deg,{p['accent']},{p['accent2']}) !important;
     color:{p['btn_text']} !important; font-weight:700 !important;
     border:none !important; border-radius:8px !important; width:100%;
+    transition: filter 0.2s ease !important;
 }}
 .stButton > button:hover {{ filter:brightness(1.1); }}
 [data-testid="stDownloadButton"] > button {{
@@ -285,8 +372,15 @@ html, body, [data-testid="stAppViewContainer"], [data-testid="stMain"] {{
 [data-testid="stCheckbox"] label {{ color:{p['text']} !important; }}
 
 /* ── Progress ── */
-.stProgress > div > div {{
-    background: linear-gradient(90deg,{p['accent']},{p['accent2']}) !important;
+.stProgress div[role="progressbar"] {{
+    background: #00d464 !important;
+    transition: width 0.3s ease !important;
+}}
+.stProgress > div {{
+    background-color: {p['border']} !important;
+}}
+[data-testid="stProgress"] * {{
+    border-radius: 8px !important;
 }}
 
 /* ── Trade card ── */
@@ -331,6 +425,41 @@ hr {{ border-color:{p['border']} !important; opacity:.6; }}
     margin-top:2.5rem; padding-top:1rem; border-top:1px solid {p['footer_border']};
 }}
 [data-testid="stRadio"] label {{ color:{p['text']} !important; }}
+
+/* ── Disable transitions on page load to prevent flash ── */
+.element-container {{
+    animation: none !important;
+    transition: none !important;
+}}
+
+/* ── Reserve space for dynamic content ── */
+.stButton {{
+    min-height: 44px;
+}}
+
+/* ── Prevent content shift ── */
+[data-testid="stVerticalBlock"] {{
+    min-height: 100px;
+}}
+
+/* ── Smooth fade-in after CSS loads ── */
+@keyframes fadeIn {{
+    from {{ opacity: 0.98; }}
+    to {{ opacity: 1; }}
+}}
+[data-testid="stAppViewContainer"] {{
+    animation: fadeIn 0.1s ease-in;
+}}
+
+/* ── Hide Streamlit rerun animation ── */
+[data-testid="stApp"]::before {{
+    display: none !important;
+}}
+
+/* ── Prevent flash during rerun ── */
+body {{
+    overflow-y: scroll;
+}}
 </style>
 """, unsafe_allow_html=True)
 
@@ -351,6 +480,10 @@ inject_css(P)
 # ══════════════════════════════════════════════════════════════════════════════
 def check_cookie_auth() -> bool:
     try:
+        # Check file-based session first (more reliable)
+        if load_session():
+            return True
+        # Fallback to cookie-based auth
         return cookies.get(COOKIE_AUTH) == COOKIE_TOKEN
     except Exception:
         return False
@@ -359,7 +492,12 @@ def do_login(username: str, password: str, remember: bool) -> bool:
     if username.strip() == ADMIN_USERNAME and password == ADMIN_PASSWORD:
         st.session_state.authenticated = True
         if remember:
-            cookies.set(COOKIE_AUTH, COOKIE_TOKEN, max_age=30 * 24 * 3600)
+            # Save to both cookie and file for reliability
+            try:
+                cookies.set(COOKIE_AUTH, COOKIE_TOKEN, max_age=30 * 24 * 3600)
+            except Exception:
+                pass  # Cookie might fail, but file-based session will work
+            save_session(COOKIE_TOKEN, expiry_days=30)
         return True
     return False
 
@@ -371,6 +509,7 @@ def do_logout():
         cookies.remove(COOKIE_AUTH)
     except Exception:
         pass
+    clear_session()
 
 if "authenticated" not in st.session_state:
     st.session_state.authenticated = check_cookie_auth()
@@ -432,7 +571,6 @@ with st.sidebar:
     MY_STOCKS_SIDEBAR = load_stocks()
     st.markdown(f"**Universe:** {len(MY_STOCKS_SIDEBAR)} stocks")
     st.markdown("**Criteria (all 4):**\n- CMP > 30 DMA\n- CMP > 50 DMA\n- CMP > 200 DMA\n- CAR rising 10 days")
-    run_btn = st.button("▶ Run Full Scan", use_container_width=True)
     if st.session_state.last_scan:
         st.caption(f"Last run: {st.session_state.last_scan}")
 
@@ -447,7 +585,10 @@ with st.sidebar:
     )
     if chosen_theme != st.session_state.theme:
         st.session_state.theme = chosen_theme
-        cookies.set(COOKIE_THEME, chosen_theme, max_age=365 * 24 * 3600)
+        try:
+            cookies.set(COOKIE_THEME, chosen_theme, max_age=365 * 24 * 3600)
+        except Exception as e:
+            logging.warning(f"Failed to save theme cookie: {e}")
         st.rerun()
 
     st.divider()
@@ -541,19 +682,57 @@ with tab_scanner:
     def run_scanner(ticker_list, pbar, status):
         results = []
         total   = len(ticker_list)
-        for i, ticker in enumerate(ticker_list, 1):
-            status.caption(f"Scanning {ticker.replace('.NS','')} ({i}/{total})…")
-            pbar.progress(i / total)
-            row = scan_stock(ticker)
-            if row:
-                results.append(row)
+        completed = 0
+        
+        # Early return for empty list
+        if total == 0:
+            return pd.DataFrame()
+        
+        # Use ThreadPoolExecutor for parallel scanning (min 10 workers or total stocks)
+        with ThreadPoolExecutor(max_workers=min(10, total)) as executor:
+            # Submit all tasks
+            future_to_ticker = {executor.submit(scan_stock, ticker): ticker for ticker in ticker_list}
+            
+            # Process completed tasks as they finish
+            for future in as_completed(future_to_ticker):
+                ticker = future_to_ticker[future]
+                completed += 1
+                
+                try:
+                    row = future.result()
+                    if row:
+                        results.append(row)
+                except Exception as e:
+                    logging.error(f"Error scanning {ticker}: {e}")
+                
+                # Update progress with error handling for thread safety
+                try:
+                    status.caption(f"Scanning {ticker.replace('.NS','')} ({completed}/{total})…")
+                    pbar.progress(completed / total)
+                except Exception:
+                    pass  # Progress update failed, continue scanning
+                    
         df = pd.DataFrame(results)
         if not df.empty:
             df = df.sort_values("200 DMA Dist %", ascending=True).reset_index(drop=True)
         return df
 
     MY_STOCKS = load_stocks()
-    trigger   = run_btn or (not st.session_state.scanned)
+    
+    # Single button - no conditional rendering to prevent layout shift
+    run_btn = st.button(
+        "🚀 Run the Scanner" if st.session_state.df_results is None else "🔄 Run Scanner Again",
+        use_container_width=True,
+        type="primary",
+        key="scanner_btn"
+    )
+    
+    # Clear results when "Run Again" clicked
+    if run_btn and st.session_state.df_results is not None:
+        st.session_state.df_results = None
+        st.rerun()
+    
+    trigger = run_btn  # Only run when button is clicked
 
     if trigger:
         if not MY_STOCKS:
@@ -613,8 +792,6 @@ with tab_scanner:
                 file_name=f"Breakout_Stocks_{datetime.now().strftime('%d-%m-%Y')}.xlsx",
                 mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
             )
-    elif not trigger:
-        st.info("Open the sidebar (☰) and tap **Run Full Scan** to begin.", icon="👈")
 
 
 # ════════════════════════════════════════════════════════════════════════
@@ -843,7 +1020,6 @@ with tab_trading:
             st.caption("No trades yet.")
         else:
             hist_rows = []
-            running_balance = port["initial_balance"]
             for t in reversed(trades):   # newest first
                 hist_rows.append({
                     "Date / Time":  t["timestamp"],
