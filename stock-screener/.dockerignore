@@ -33,10 +33,11 @@ portfolio.json
 session.json
 
 # Docker-adjacent files (no need to ship inside the image)
+# NOTE: do NOT exclude docker-entrypoint.sh here — the Dockerfile
+# COPYs it into the image at /usr/local/bin/docker-entrypoint.sh.
 Dockerfile
 .dockerignore
 docker-compose.yml
-docker-entrypoint.sh
 
 # CI / meta
 .github/
