@@ -4,6 +4,7 @@ from __future__ import annotations
 import pandas as pd
 
 from app.styles.palettes import Palette
+from app.styles.tables import table_styles
 
 
 def dist_colour(val, p: Palette) -> str:
@@ -18,7 +19,13 @@ def dist_colour(val, p: Palette) -> str:
 
 
 def style_breakout_df(df: pd.DataFrame, p: Palette) -> pd.io.formats.style.Styler:
-    """Apply distance colour-banding + ₹ formatting to the breakout dataframe."""
+    """Apply distance colour-banding + ₹ formatting to the breakout dataframe.
+
+    Also bakes dark-theme table styles directly into the table HTML via
+    ``set_table_styles()``. This is critical on mobile Chrome (Android),
+    where the browser auto-dark-modes iframe content and otherwise paints
+    the dataframe cells white. See app/styles/tables.py for full rationale.
+    """
     return (
         df.style
         .map(lambda v: dist_colour(v, p), subset=["200 DMA Dist %"])
@@ -28,4 +35,5 @@ def style_breakout_df(df: pd.DataFrame, p: Palette) -> pd.io.formats.style.Style
             "200 DMA Dist %": "{:.2f}%",
         })
         .hide(axis="index")
+        .set_table_styles(table_styles(p), overwrite=False)
     )
