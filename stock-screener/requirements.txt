@@ -1,6 +1,20 @@
-streamlit>=1.35.0
-yfinance>=0.2.40
-pandas>=2.1.0
-openpyxl>=3.1.0
-plotly>=5.20.0
-streamlit-cookies-controller>=0.0.4
+# ── Core app dependencies ────────────────────────────────────────────────────
+# Pinned with upper bounds for reproducible Docker builds. Versions verified
+# to work together on Python 3.12 (Aug 2026).
+
+# Web framework
+streamlit>=1.35.0,<2.0.0
+
+# Market data (NSE tickers via Yahoo Finance)
+yfinance>=0.2.40,<1.0.0
+
+# Dataframes
+pandas>=2.1.0,<3.0.0
+numpy>=1.26.0,<3.0.0
+
+# Transitive deps that we list explicitly for stability
+openpyxl>=3.1.0,<4.0.0     # used by pandas for Excel I/O (kept for future use)
+plotly>=5.20.0,<7.0.0      # bundled with streamlit; used by st.plotly_chart if added
+
+# Auth / cookie persistence (theme + auth token)
+streamlit-cookies-controller>=0.0.4,<1.0.0
