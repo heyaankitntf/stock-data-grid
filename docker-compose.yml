@@ -1,10 +1,31 @@
 # docker-compose.yml — convenience wrapper for local development.
 #
-# Usage:
-#   docker compose up               # foreground
-#   docker compose up -d            # detached
-#   docker compose down             # stop + remove container
-#   docker compose down -v          # also wipe the data volume
+# IMPORTANT: Use `docker compose` V2 (the Go plugin, with a SPACE), NOT
+# `docker-compose` V1 (the Python tool, with a HYPHEN). V1 (1.29.2) is EOL
+# since May 2023 and has a known bug where recreating a container that was
+# originally created by Docker Engine 25+ crashes with:
+#
+#   ERROR: for scanner  'ContainerConfig'
+#   KeyError: 'ContainerConfig'
+#
+# This is because modern Docker Engine no longer includes the `ContainerConfig`
+# key in image inspect metadata, and V1 looks for it. V2 is the supported
+# replacement and ships with Docker Engine 20.10+ as a CLI plugin.
+#
+# Check your version:
+#   docker compose version       # V2 — RECOMMENDED
+#   docker-compose version       # V1 — AVOID (will hit KeyError)
+#
+# Usage (V2):
+#   docker compose up            # foreground
+#   docker compose up -d         # detached
+#   docker compose down          # stop + remove container
+#   docker compose down -v       # also wipe the data volume
+#   docker compose up -d --build # rebuild image then start
+#
+# If you're stuck on V1 and hit the KeyError, the workaround is to remove
+# the old container first so V1 has nothing to inspect:
+#   docker rm -f scanner && docker-compose up -d
 #
 services:
   scanner:
