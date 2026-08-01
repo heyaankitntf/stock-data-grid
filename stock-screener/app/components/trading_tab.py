@@ -1,6 +1,8 @@
 """Trading tab fragment: portfolio overview, holdings, trade form, history."""
 from __future__ import annotations
 
+from datetime import datetime
+
 import streamlit as st
 import pandas as pd
 
@@ -253,7 +255,6 @@ def _render_trade_history(port: dict, p: Palette) -> None:
 
 def render_trading_tab(p: Palette) -> None:
     """Render the Mock Trading tab."""
-    from datetime import datetime  # local import; only used in _render_trade_form
     port      = load_portfolio()
     holdings  = compute_holdings(port["trades"])
     my_stocks = load_stocks()
