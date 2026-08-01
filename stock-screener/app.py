@@ -15,6 +15,7 @@ Architecture (industry-standard modular layout):
             palettes.py         ← dark/light colour palettes
             bootstrap.py        ← CRITICAL FOUC-prevention CSS (runs first)
             css.py              ← decorative per-theme CSS
+            tables.py           ← pandas-Styler table styles (mobile dark fix)
         auth/
             __init__.py
             session.py          ← file-based session token
@@ -49,10 +50,22 @@ FOUC prevention summary (see app/styles/bootstrap.py for full rationale):
     5. Scanner tab is wrapped in @st.fragment so button clicks don't
        trigger a full app rerun (eliminates duplicate-render flash).
     6. No st.rerun() is called after long-running operations.
+
+Error handling summary (see .streamlit/config.toml + try/except below):
+    - config.toml: showErrorDetails=false hides Python stack traces from
+      users; toolbarMode="viewer" hides the dev hamburger menu.
+    - bootstrap.py: CSS hides the floating "connection status" dot that
+      turns red on transient WebSocket blips (auto-recovers in 2s).
+    - app.py: the main body is wrapped in try/except so any unhandled
+      exception (e.g. yfinance returning malformed data for one ticker)
+      renders a small inline "Something went wrong" notice instead of
+      a full-screen red error box. The real traceback still goes to
+      stdout / docker logs for debugging.
 """
 from __future__ import annotations
 
 import logging
+import traceback
 import warnings
 
 import streamlit as st
@@ -107,24 +120,41 @@ for k, v in [("df_results", None), ("last_scan", None), ("scanned", False),
         st.session_state[k] = v
 
 
-# ── 5. Sidebar ───────────────────────────────────────────────────────────────
-render_sidebar()
+# ── 5-7. Main content wrapped in try/except ──────────────────────────────────
+# Any unhandled exception here (yfinance hang, malformed ticker data, JSON
+# decode error in portfolio.json, etc.) would otherwise render as a full
+# red stack-trace box via Streamlit's default error UI. With
+# showErrorDetails=false in .streamlit/config.toml the trace is hidden from
+# the user, but the box itself is still alarming. We catch + log + render
+# a small inline notice so the user sees "Something went wrong, reload"
+# instead of a wall of red.
+try:
+    # ── 5. Sidebar ───────────────────────────────────────────────────────────
+    render_sidebar()
 
+    # ── 6. Main content: hero + tabs ────────────────────────────────────────
+    render_hero()
 
-# ── 6. Main content: hero + tabs ─────────────────────────────────────────────
-render_hero()
+    tab_scanner, tab_trading = st.tabs(["📊 Scanner", "💼 Mock Trading"])
 
-tab_scanner, tab_trading = st.tabs(["📊 Scanner", "💼 Mock Trading"])
+    with tab_scanner:
+        render_scanner_tab(P)
 
-with tab_scanner:
-    render_scanner_tab(P)
+    with tab_trading:
+        render_trading_tab(P)
 
-with tab_trading:
-    render_trading_tab(P)
-
-
-# ── 7. Footer ────────────────────────────────────────────────────────────────
-st.markdown(
-    '<div class="footer">Data via Yahoo Finance · Mock trading only · Not financial advice · Educational use</div>',
-    unsafe_allow_html=True,
-)
+    # ── 7. Footer ───────────────────────────────────────────────────────────
+    st.markdown(
+        '<div class="footer">Data via Yahoo Finance · Mock trading only · Not financial advice · Educational use</div>',
+        unsafe_allow_html=True,
+    )
+except Exception:
+    # Log the full traceback for debugging (visible via `docker logs`).
+    logging.error("Unhandled exception in app body:\n%s", traceback.format_exc())
+    # Show the user a small, non-scary inline notice. They can reload to
+    # retry — most causes are transient (network blip, yfinance hiccup).
+    st.warning(
+        "⚠️ Something went wrong rendering this screen. "
+        "Please reload the page — if the issue persists, try again in a moment.",
+        icon="🔄",
+    )

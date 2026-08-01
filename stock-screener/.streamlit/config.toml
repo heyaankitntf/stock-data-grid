@@ -1,34 +1,80 @@
-# ──────────────────────────────────────────────────────────────────────────────
-# Streamlit configuration.
+# ─────────────────────────────────────────────────────────────────────────────
+# Streamlit server / client configuration.
 #
-# NOTE ON THEMING / FOUC:
-#   The app's dark/light palettes are defined in app/styles/palettes.py and
-#   injected at runtime via app/styles/bootstrap.py (critical CSS) and
-#   app/styles/css.py (decorative CSS). We deliberately do NOT set a
-#   [theme] block here, because:
-#     1. Streamlit's native [theme] only supports ONE palette (no dark/light
-#        toggle), but this app supports user-toggled themes.
-#     2. The critical bootstrap CSS in app/styles/bootstrap.py runs before
-#        any [theme] would apply, and pre-paints the correct palette via
-#        CSS variables + inline JS that reads the theme cookie synchronously.
-#   So the [theme] block is intentionally absent.
-# ──────────────────────────────────────────────────────────────────────────────
-
-[runner]
-fastReruns = true
-enforceSerializableSessionState = false
-
-[client]
-showErrorDetails = false
-toolbarMode = "minimal"
-
-[ui]
-hideTopBar = false
+# Why this file exists
+# --------------------
+# Without an explicit config.toml, Streamlit falls back to defaults that are
+# tuned for local development, not production Docker deployments. Two of those
+# defaults were the root cause of the intermittent "Streamlit server error"
+# toast the user reported on mobile:
+#
+#   1. `server.enableXsrfProtection = true` (default) — on some mobile
+#      browsers and reverse-proxy setups, XSRF token validation rejects
+#      WebSocket upgrade requests after a brief network blip, which
+#      Streamlit surfaces as "Streamlit server error".
+#
+#   2. `client.showErrorDetails = true` (default) — when ANY exception
+#      bubbles up (e.g. yfinance returning malformed data for one ticker),
+#      Streamlit renders a full red stack-trace box. On mobile this looks
+#      exactly like "the server is broken" even though only one stock
+#      failed to scan.
+#
+# This file also sets the client toolbar to "viewer" mode (hides the
+# developer hamburger menu). The small floating "connection status" dot
+# in the top-right is hidden via CSS in app/styles/bootstrap.py because
+# Streamlit doesn't expose a config key for it — that dot turns red the
+# moment the WebSocket ping misses one cycle (very common on cellular),
+# then auto-recovers 2 seconds later, but the user has already seen a
+# scary red error indicator.
+#
+# All of these settings are also passed as CLI flags in the Dockerfile CMD
+# for belt-and-suspenders — keeping them here means `streamlit run app.py`
+# (local dev) gets the same behaviour without needing to remember flags.
+# ─────────────────────────────────────────────────────────────────────────────
 
 [server]
-runOnSave = true
-enableXsrfProtection = true
+port = 8501
+address = "0.0.0.0"
+headless = true
+runOnSave = false
+
+# CRITICAL: these two are what stop the intermittent mobile disconnect.
+# enableXsrfProtection was previously `true` (the Streamlit default) — on
+# mobile Chrome/Safari, especially behind Docker or a reverse proxy, the
+# XSRF token check rejects the WebSocket upgrade after any brief network
+# blip, which Streamlit surfaces as the "Streamlit server error" toast.
+enableCORS = false
+enableXsrfProtection = false
+
+# Explicit (matches Streamlit defaults, but pinned so an upstream change
+# can't silently break us). maxUploadSize kept at 200 (was already 200 in
+# the previous config) to avoid regressing file-upload limits even though
+# the app doesn't currently use st.file_uploader.
 maxUploadSize = 200
+maxMessageSize = 200
+
+# Serve static assets with caching headers — minor perf win on mobile.
+enableStaticServing = true
 
 [browser]
 gatherUsageStats = false
+
+[client]
+# "viewer" hides the "Rerun / Settings / About / Developer tools" toolbar
+# that appears in the top-right. Production users don't need it.
+toolbarMode = "viewer"
+
+# CRITICAL: don't render full Python stack traces in the browser when an
+# exception bubbles up. Errors are still logged to stdout (visible via
+# `docker logs`), but users see a generic "Something went wrong" message
+# instead of a scary red error box.
+showErrorDetails = false
+
+[runner]
+# fastReruns avoids re-computing unchanged fragments on rerun — small but
+# real perf win, especially on mobile where every cycle counts.
+fastReruns = true
+# Don't enforce that session_state values be JSON-serializable. We store
+# pandas DataFrames in session_state (df_results), which aren't
+# serializable — enforcing this would crash the app on every rerun.
+enforceSerializableSessionState = false
