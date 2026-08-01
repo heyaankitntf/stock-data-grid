@@ -1,49 +1,109 @@
-# See https://docs.github.com/en/get-started/getting-started-with-git/ignoring-files for more about ignoring files.
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+build/
+develop-eggs/
+dist/
+downloads/
+eggs/
+.eggs/
+lib/
+lib64/
+parts/
+sdist/
+var/
+wheels/
+pip-wheel-metadata/
+share/python-wheels/
+*.egg-info/
+.installed.cfg
+*.egg
+MANIFEST
 
-# compiled output
-dist
-tmp
-out-tsc
-*.tsbuildinfo
-.expo
-.expo-shared
+# Virtual Environment
+venv/
+env/
+ENV/
+env.bak/
+venv.bak/
+stock-screener/venv/
 
-# dependencies
-node_modules
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+.DS_Store
 
-# IDEs and editors
-/.idea
-.project
-.classpath
-.c9/
-*.launch
-.settings/
-*.sublime-workspace
+# Streamlit
+.streamlit/secrets.toml
+*.log
+streamlit.log
 
-# IDE - VSCode
-.vscode/*
-!.vscode/settings.json
-!.vscode/tasks.json
-!.vscode/launch.json
-!.vscode/extensions.json
+# Data & Session Files (IMPORTANT - Don't commit sensitive data)
+stock-screener/session.json
+stock-screener/portfolio.json
+stock-screener/settings.json
 
-# misc
-/.sass-cache
-/connect.lock
-/coverage
-/libpeerconnection.log
-npm-debug.log
-yarn-error.log
-testem.log
-/typings
+# Backup files
+*.backup
+*.bak
+app.py.backup
 
-# System Files
+# OS
 .DS_Store
 Thumbs.db
+desktop.ini
 
-.cursor/rules/nx-rules.mdc
-.github/instructions/nx.instructions.md
+# Logs
+*.log
+logs/
+*.out
 
-# Replit
+# Temporary files
+*.tmp
+*.temp
 .cache/
+.pytest_cache/
+
+# Jupyter Notebook
+.ipynb_checkpoints
+
+# Environment variables
+.env
+.env.local
+.env.*.local
+
+# Database
+*.db
+*.sqlite
+*.sqlite3
+
+# Excel exports (optional - uncomment if you don't want to track exports)
+# *.xlsx
+# *.xls
+
+# CSV exports (optional)
+# *.csv
+
+# Node modules (if you add any JS tooling)
+node_modules/
+
+# Coverage reports
+htmlcov/
+.coverage
+.coverage.*
+coverage.xml
+*.cover
+
+# Kiro
+.kiro/cache/
 .local/
+.agents/
+
+# Secondary skills (optional - these are large)
+.local/secondary_skills/

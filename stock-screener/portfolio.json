@@ -1,36 +1,66 @@
 {
   "initial_balance": 1000000,
-  "balance": 916846.0,
+  "balance": 979905.2,
   "trades": [
     {
-      "id": "0b44c38e",
-      "ticker": "ETERNAL.NS",
-      "stock": "ETERNAL",
+      "id": "a1856c04",
+      "ticker": "ABB.NS",
+      "stock": "ABB",
       "action": "BUY",
-      "qty": 100,
-      "price": 284.4,
-      "value": 28440.0,
-      "timestamp": "22-07-2026 10:29"
+      "qty": 2,
+      "price": 7284.5,
+      "value": 14569.0,
+      "timestamp": "31-07-2026 19:04"
     },
     {
-      "id": "f5856042",
-      "ticker": "NHPC.NS",
-      "stock": "NHPC",
+      "id": "b70d3fb2",
+      "ticker": "AUBANK.NS",
+      "stock": "AUBANK",
       "action": "BUY",
-      "qty": 200,
-      "price": 80.28,
-      "value": 16056.0,
-      "timestamp": "22-07-2026 10:30"
+      "qty": 1,
+      "price": 1047.3,
+      "value": 1047.3,
+      "timestamp": "31-07-2026 19:05"
     },
     {
-      "id": "8cd4e87e",
-      "ticker": "RELIANCE.NS",
-      "stock": "RELIANCE",
+      "id": "a37fb747",
+      "ticker": "DMART.NS",
+      "stock": "DMART",
       "action": "BUY",
-      "qty": 30,
-      "price": 1288.6,
-      "value": 38658.0,
-      "timestamp": "22-07-2026 10:33"
+      "qty": 5,
+      "price": 3921.0,
+      "value": 19605.0,
+      "timestamp": "31-07-2026 19:05"
+    },
+    {
+      "id": "0abdbc06",
+      "ticker": "ABB.NS",
+      "stock": "ABB",
+      "action": "SELL",
+      "qty": 1,
+      "price": 7284.5,
+      "value": 7284.5,
+      "timestamp": "31-07-2026 19:05"
+    },
+    {
+      "id": "b840e44e",
+      "ticker": "DMART.NS",
+      "stock": "DMART",
+      "action": "SELL",
+      "qty": 3,
+      "price": 3921.0,
+      "value": 11763.0,
+      "timestamp": "31-07-2026 19:06"
+    },
+    {
+      "id": "e2fe2c24",
+      "ticker": "DMART.NS",
+      "stock": "DMART",
+      "action": "BUY",
+      "qty": 1,
+      "price": 3921.0,
+      "value": 3921.0,
+      "timestamp": "31-07-2026 19:07"
     }
   ]
 }
