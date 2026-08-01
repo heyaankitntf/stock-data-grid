@@ -49,12 +49,17 @@ _CRITICAL_BOOTSTRAP_HTML = r"""
   --sdg-bg2: #0f2030;
   --sdg-text: #d0e0f0;
   --sdg-accent: #00d4aa;
+  /* color-scheme: dark tells mobile browsers (especially Chrome on Android)
+     "this page is already dark, don't auto-dark-mode my iframes". Without
+     this, st.dataframe's iframe table cells paint white on dark apps. */
+  color-scheme: dark;
 }
 html[data-sdg-theme="light"] {
   --sdg-bg: #f2f6fb;
   --sdg-bg2: #ffffff;
   --sdg-text: #162030;
   --sdg-accent: #1565c0;
+  color-scheme: light;
 }
 
 /* Paint the app shell with our palette immediately. !important is required
