@@ -60,21 +60,21 @@ def _render_portfolio_overview(port: dict, holdings: dict, cached_prices: dict, 
 
     ref_col, _, reset_col = st.columns([1, 3, 1])
     with ref_col:
-        if st.button("🔄 Refresh Prices", use_container_width=True):
+        if st.button("🔄 Refresh Prices", width="stretch"):
             if held_tickers:
                 with st.spinner("Fetching live prices…"):
                     fresh = fetch_cmp_bulk(held_tickers)
                     st.session_state.portfolio_prices = {**cached_prices, **fresh}
                 st.rerun()
     with reset_col:
-        if st.button("🗑️ Reset Portfolio", use_container_width=True):
+        if st.button("🗑️ Reset Portfolio", width="stretch"):
             st.session_state["_confirm_reset"] = True
 
     if st.session_state.get("_confirm_reset"):
         st.warning("This will wipe all trades and restore ₹10,00,000 balance. Are you sure?")
         yes_col, no_col = st.columns(2)
         with yes_col:
-            if st.button("✅ Yes, Reset", use_container_width=True):
+            if st.button("✅ Yes, Reset", width="stretch"):
                 save_portfolio({
                     "initial_balance": INITIAL_BALANCE,
                     "balance": INITIAL_BALANCE,
@@ -84,7 +84,7 @@ def _render_portfolio_overview(port: dict, holdings: dict, cached_prices: dict, 
                 st.session_state.pop("_confirm_reset", None)
                 st.rerun()
         with no_col:
-            if st.button("❌ Cancel", use_container_width=True):
+            if st.button("❌ Cancel", width="stretch"):
                 st.session_state.pop("_confirm_reset", None)
                 st.rerun()
 
@@ -128,7 +128,7 @@ def _render_holdings(holdings: dict, cached_prices: dict, p: Palette) -> None:
         .format(fmt, na_rep="—")
         .hide(axis="index")
     )
-    st.dataframe(styled_h, use_container_width=True,
+    st.dataframe(styled_h, width="stretch",
                  height=min(80 + len(rows) * 40, 500))
 
 
@@ -148,7 +148,7 @@ def _render_trade_form(port: dict, my_stocks: list[str], p: Palette) -> None:
                           format_func=lambda x: f"🟢 {x}" if x == "BUY" else f"🔴 {x}")
         qty    = st.number_input("Quantity (shares)", min_value=1, max_value=100000,
                                  value=1, step=1)
-        fetch_btn = st.button("📡 Get Live Price", use_container_width=True)
+        fetch_btn = st.button("📡 Get Live Price", width="stretch")
         if fetch_btn and selected_ticker != "—":
             with st.spinner(f"Fetching CMP for {selected_ticker.replace('.NS','')}…"):
                 price = fetch_cmp_single(selected_ticker)
@@ -199,7 +199,7 @@ def _render_trade_form(port: dict, my_stocks: list[str], p: Palette) -> None:
 </div>
 """, unsafe_allow_html=True)
 
-            if st.button(f"✅ Confirm {action_lbl}", use_container_width=True):
+            if st.button(f"✅ Confirm {action_lbl}", width="stretch"):
                 ok, msg = execute_trade(tp["ticker"], tp["stock"],
                                         tp["action"], tp["qty"], tp["price"])
                 if ok:
@@ -243,7 +243,7 @@ def _render_trade_history(port: dict, p: Palette) -> None:
             .format({"Price (₹)": "₹{:,.2f}", "Value (₹)": "₹{:,.0f}"})
             .hide(axis="index")
         )
-        st.dataframe(styled_hist, use_container_width=True,
+        st.dataframe(styled_hist, width="stretch",
                      height=min(80 + len(hist_rows) * 38, 420))
         st.download_button(
             label="⬇️ Export Trade History",

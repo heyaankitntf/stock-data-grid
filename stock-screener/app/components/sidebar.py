@@ -37,7 +37,7 @@ def render_sidebar() -> str:
 
     with st.sidebar:
         st.markdown("👤 **admin**")
-        if st.button("🚪 Logout", use_container_width=True):
+        if st.button("🚪 Logout", width="stretch"):
             do_logout()
             st.rerun()
 
@@ -87,10 +87,10 @@ def render_sidebar() -> str:
         )
         sc, rc = st.columns(2)
         with sc:
-            if st.button("💾 Save", use_container_width=True):
+            if st.button("💾 Save", width="stretch"):
                 _save_stock_universe(raw_text)
         with rc:
-            if st.button("↩️ Reload", use_container_width=True):
+            if st.button("↩️ Reload", width="stretch"):
                 st.rerun()
         st.markdown(
             f'<div class="stock-badge">📋 {len(current_stocks)} symbols</div>',
