@@ -1,0 +1,34 @@
+# docker-compose.yml — convenience wrapper for local development.
+#
+# Usage:
+#   docker compose up               # foreground
+#   docker compose up -d            # detached
+#   docker compose down             # stop + remove container
+#   docker compose down -v          # also wipe the data volume
+#
+services:
+  scanner:
+    build:
+      context: ./stock-screener
+      dockerfile: Dockerfile
+    image: stock-scanner:latest
+    container_name: scanner
+    ports:
+      - "8501:8501"
+    volumes:
+      - scanner-data:/app/data
+    environment:
+      # Override these in production via a .env file or shell export.
+      - ADMIN_USERNAME=admin
+      - ADMIN_PASSWORD=admin123
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "curl", "-fsS", "http://127.0.0.1:8501/_stcore/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 15s
+
+volumes:
+  scanner-data:
+    driver: local

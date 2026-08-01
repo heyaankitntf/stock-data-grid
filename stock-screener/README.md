@@ -6,6 +6,8 @@ Includes a mock trading module with live P&L tracking.
 
 ## Quick start
 
+### Option A — Run locally with Python
+
 ```bash
 cd stock-screener
 python3 -m venv venv && source venv/bin/activate
@@ -15,11 +17,50 @@ streamlit run app.py
 
 Default login: `admin` / `admin123` (change in production).
 
+### Option B — Run with Docker
+
+```bash
+# Build the image (run from repo root)
+docker build -t stock-scanner:latest ./stock-screener
+
+# Run on http://localhost:8501 with persistent data volume
+docker run --rm -p 8501:8501 \
+  -v scanner-data:/app/data \
+  stock-scanner:latest
+```
+
+Detached run with custom admin password:
+
+```bash
+docker run -d --name scanner -p 8501:8501 \
+  -v scanner-data:/app/data \
+  stock-scanner:latest
+```
+
+Useful commands:
+
+```bash
+docker logs -f scanner                # tail logs
+docker stop scanner                   # graceful stop
+docker volume rm scanner-data         # wipe portfolio/session data
+docker compose -f docker-compose.yml up   # if using compose (see below)
+```
+
+The Docker image:
+- Is built on `python:3.12-slim` (≈ 450 MB)
+- Runs as non-root user `appuser` (uid 1001)
+- Uses `tini` as PID 1 for proper signal handling
+- Has a healthcheck polling `/_stcore/health`
+- Persists `portfolio.json` + `session.json` into the mounted volume via the entrypoint shim
+
 ## Project structure
 
 ```
 stock-screener/
 ├── app.py                      ← thin entry point
+├── Dockerfile                  ← container build
+├── docker-entrypoint.sh        ← data-volume wiring + CMD handoff
+├── .dockerignore               ← excluded from build context
 ├── app/
 │   ├── __init__.py
 │   ├── config/
@@ -57,8 +98,10 @@ stock-screener/
 │   └── config.toml
 ├── requirements.txt
 ├── settings.json               ← stock universe (gitignored)
-└── portfolio.json              ← trade data (gitignored)
+└── portfolio.json              ← trade data (gitignored, persisted to /app/data in Docker)
 ```
+
+> The `docker-compose.yml` at the repo root is a convenience wrapper around the `docker run` command — see the Docker quick start above.
 
 ## FOUC prevention
 

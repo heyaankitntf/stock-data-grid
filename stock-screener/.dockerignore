@@ -1,0 +1,49 @@
+# Version control
+.git
+.gitignore
+.gitattributes
+
+# Python caches
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+*.egg-info/
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+
+# Virtual envs (never bake these into the image)
+venv/
+.venv/
+env/
+ENV/
+
+# Streamlit / IDE state
+.streamlit/secrets.toml
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# Local data — the entrypoint seeds these from a template at first boot,
+# so don't ship host-specific copies in the image.
+portfolio.json
+session.json
+
+# Docker-adjacent files (no need to ship inside the image)
+Dockerfile
+.dockerignore
+docker-compose.yml
+docker-entrypoint.sh
+
+# CI / meta
+.github/
+.kiro/
+.replit
+.replitignore
+.npmrc
+artifacts/
+*.md
+!README.md
