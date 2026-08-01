@@ -9,6 +9,10 @@ enableXsrfProtection = false
 gatherUsageStats = false
 
 [theme]
+# These values MUST match PALETTES["dark"] in app.py.
+# Streamlit renders this theme *before* our Python-side inject_css() runs,
+# so if these don't match the custom palette, the user sees a color flash
+# (FOUC) on every refresh. Keeping them in sync eliminates the flash.
 base = "dark"
 backgroundColor = "#0b1622"
 secondaryBackgroundColor = "#0f2030"
