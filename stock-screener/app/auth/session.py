@@ -27,7 +27,14 @@ def load_session() -> bool:
         if not SESSION_FILE.exists():
             return False
         data = json.loads(SESSION_FILE.read_text())
-        expiry = datetime.fromisoformat(data.get("expiry", ""))
+        # Guard against missing/empty 'expiry' (e.g. freshly-seeded session.json
+        # from the Docker entrypoint, or a hand-edited file). Without this,
+        # datetime.fromisoformat('') raises ValueError and logs noise on every
+        # page load.
+        expiry_str = data.get("expiry", "")
+        if not expiry_str:
+            return False
+        expiry = datetime.fromisoformat(expiry_str)
         if datetime.now() < expiry and data.get("token") == COOKIE_TOKEN:
             return True
         SESSION_FILE.unlink(missing_ok=True)

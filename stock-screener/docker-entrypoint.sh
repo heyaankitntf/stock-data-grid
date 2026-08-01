@@ -22,6 +22,11 @@ for f in portfolio.json session.json; do
 
     # Seed the volume on first boot if the file doesn't exist.
     # (Subsequent boots skip this — the volume retains user data.)
+    #
+    # Note: session.json is intentionally NOT seeded — the app creates it
+    # on first login via save_session(). If we seed it with '{}' here,
+    # load_session() would try to parse an empty expiry on every page load
+    # (handled gracefully, but still log noise).
     if [ ! -e "$stored" ]; then
         case "$f" in
             portfolio.json)
@@ -34,7 +39,10 @@ for f in portfolio.json session.json; do
 JSON
                 ;;
             session.json)
-                echo '{}' > "$stored"
+                # Don't seed — just touch an empty file so the symlink
+                # target exists. load_session() handles empty/missing
+                # expiry gracefully (returns False, no log noise).
+                : > "$stored"
                 ;;
         esac
     fi

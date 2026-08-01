@@ -56,7 +56,7 @@ def render_login_page(p: Palette) -> None:
         username  = st.text_input("Username", placeholder="admin")
         password  = st.text_input("Password", type="password", placeholder="••••••••")
         remember  = st.checkbox("Remember me for 30 days")
-        submitted = st.form_submit_button("🔐 Sign In", use_container_width=True)
+        submitted = st.form_submit_button("🔐 Sign In", width="stretch")
     if submitted:
         if do_login(username, password, remember):
             st.rerun()

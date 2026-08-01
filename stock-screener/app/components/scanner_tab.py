@@ -56,7 +56,7 @@ def _render_results(df: pd.DataFrame, my_stocks: list[str], p: Palette) -> None:
     st.markdown(f"### 🟢 Breakout Stocks — {n} found")
     st.caption("Sorted by distance from 200 DMA · closest first")
     styled = style_breakout_df(df, p)
-    st.dataframe(styled, use_container_width=True, height=min(80 + n * 38, 680))
+    st.dataframe(styled, width="stretch", height=min(80 + n * 38, 680))
     st.download_button(
         label="⬇️  Download Excel", data=_to_excel(df),
         file_name=f"Breakout_Stocks_{datetime.now().strftime('%d-%m-%Y')}.xlsx",
@@ -74,7 +74,7 @@ def render_scanner_tab(p: Palette) -> None:
     run_btn = st.button(
         "🚀 Run Scanner" if st.session_state.df_results is None
         else "🔄 Run Scanner Again",
-        use_container_width=True,
+        width="stretch",
         type="primary",
         key="scanner_btn",
     )
