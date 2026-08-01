@@ -72,7 +72,7 @@ def render_scanner_tab(p: Palette) -> None:
     # Single button with dynamic label. No conditional rendering, no
     # duplicate buttons, no st.rerun() on click.
     run_btn = st.button(
-        "🚀 Run the Scanner" if st.session_state.df_results is None
+        "🚀 Run Scanner" if st.session_state.df_results is None
         else "🔄 Run Scanner Again",
         use_container_width=True,
         type="primary",
