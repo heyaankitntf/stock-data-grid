@@ -10,6 +10,7 @@ from app.config import INITIAL_BALANCE
 from app.portfolio import compute_holdings, execute_trade, load_portfolio, save_portfolio
 from app.scanner import load_stocks
 from app.styles.palettes import Palette
+from app.styles.tables import table_styles
 from app.trading import fetch_cmp_bulk, fetch_cmp_single
 
 
@@ -127,6 +128,7 @@ def _render_holdings(holdings: dict, cached_prices: dict, p: Palette) -> None:
         .map(lambda v: _pnl_style(v, p), subset=["P&L (₹)", "P&L %"])
         .format(fmt, na_rep="—")
         .hide(axis="index")
+        .set_table_styles(table_styles(p), overwrite=False)
     )
     st.dataframe(styled_h, width="stretch",
                  height=min(80 + len(rows) * 40, 500))
@@ -242,6 +244,7 @@ def _render_trade_history(port: dict, p: Palette) -> None:
             .map(lambda v: _action_style(v, p), subset=["Action"])
             .format({"Price (₹)": "₹{:,.2f}", "Value (₹)": "₹{:,.0f}"})
             .hide(axis="index")
+            .set_table_styles(table_styles(p), overwrite=False)
         )
         st.dataframe(styled_hist, width="stretch",
                      height=min(80 + len(hist_rows) * 38, 420))
