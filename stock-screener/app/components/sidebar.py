@@ -41,8 +41,6 @@ def render_sidebar() -> str:
             do_logout()
             st.rerun()
 
-        st.divider()
-
         st.markdown("### 🔍 Scanner")
         my_stocks = load_stocks()
         st.markdown(f"**Universe:** {len(my_stocks)} stocks")
@@ -71,8 +69,6 @@ def render_sidebar() -> str:
             except Exception:
                 pass
             st.rerun()
-
-        st.divider()
 
         st.markdown("### 🗂️ Stock Universe")
         st.caption("One per line or comma-separated. `.NS` auto-added.")
