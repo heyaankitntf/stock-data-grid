@@ -9,7 +9,7 @@ Each stock is evaluated against four criteria (all must be true):
 from __future__ import annotations
 
 import logging
-from concurrent.futures import ThreadPoolExecutor, as_completed
+import time
 from datetime import datetime
 
 import pandas as pd
@@ -24,7 +24,6 @@ from app.config import (
     MIN_BARS_REQUIRED,
     SCAN_INTERVAL,
     SCAN_PERIOD,
-    SCAN_WORKERS,
 )
 
 
@@ -63,35 +62,26 @@ def scan_stock(ticker: str) -> dict | None:
 
 
 def run_scanner(ticker_list: list[str], pbar, status) -> pd.DataFrame:
-    """Scan all tickers in parallel, updating ``pbar`` / ``status`` as we go.
+    """Scan all tickers sequentially, updating ``pbar`` / ``status`` as we go.
 
-    Uses a ThreadPoolExecutor so yfinance's blocking I/O runs concurrently.
-    Progress updates are wrapped in try/except for thread safety — Streamlit
-    widgets are not fully thread-safe and occasional update failures should
-    not abort the scan.
+    Sequential scanning is used instead of ThreadPoolExecutor because yfinance
+    downloads are not thread-safe — concurrent requests to Yahoo Finance cause
+    rate-limiting and throttling, producing different (missing) results on
+    every run. A small inter-request delay avoids triggering Yahoo's rate
+    limiter while keeping the scan reliable and deterministic.
     """
     results: list[dict] = []
     total = len(ticker_list)
-    completed = 0
 
-    with ThreadPoolExecutor(max_workers=SCAN_WORKERS) as executor:
-        future_to_ticker = {
-            executor.submit(scan_stock, t): t for t in ticker_list
-        }
-        for future in as_completed(future_to_ticker):
-            ticker = future_to_ticker[future]
-            completed += 1
-            try:
-                row = future.result()
-                if row:
-                    results.append(row)
-            except Exception as e:
-                logging.error("Error scanning %s: %s", ticker, e)
-            try:
-                status.caption(f"Scanning {ticker.replace('.NS','')} ({completed}/{total})…")
-                pbar.progress(completed / total)
-            except Exception:
-                pass  # Progress update failed, continue scanning
+    for i, ticker in enumerate(ticker_list, 1):
+        status.caption(f"Scanning {ticker.replace('.NS','')} ({i}/{total})…")
+        pbar.progress(i / total)
+        row = scan_stock(ticker)
+        if row:
+            results.append(row)
+        # Small delay to avoid Yahoo Finance rate-limiting
+        if i < total:
+            time.sleep(0.15)
 
     df = pd.DataFrame(results)
     if not df.empty:
