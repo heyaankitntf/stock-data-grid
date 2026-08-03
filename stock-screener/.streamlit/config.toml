@@ -4,15 +4,21 @@
 # NOTE ON THEMING / FOUC:
 #   The app's dark/light palettes are defined in app/styles/palettes.py and
 #   injected at runtime via app/styles/bootstrap.py (critical CSS) and
-#   app/styles/css.py (decorative CSS). We deliberately do NOT set a
-#   [theme] block here, because:
-#     1. Streamlit's native [theme] only supports ONE palette (no dark/light
-#        toggle), but this app supports user-toggled themes.
-#     2. The critical bootstrap CSS in app/styles/bootstrap.py runs before
-#        any [theme] would apply, and pre-paints the correct palette via
-#        CSS variables + inline JS that reads the theme cookie synchronously.
-#   So the [theme] block is intentionally absent.
+#   app/styles/css.py (decorative CSS).
+#
+#   We force base = "dark" here so that Streamlit's native theme engine
+#   always starts in dark mode, regardless of the OS/browser preference.
+#   This prevents the light-mode flash when the system theme is light.
+#   The app's custom theme toggle (dark/light) in the sidebar then
+#   overrides the visual palette via CSS variables.
 # ──────────────────────────────────────────────────────────────────────────────
+
+[theme]
+base = "dark"
+primaryColor = "#00d4aa"
+backgroundColor = "#0b1622"
+secondaryBackgroundColor = "#0f2030"
+textColor = "#d0e0f0"
 
 [runner]
 fastReruns = true
