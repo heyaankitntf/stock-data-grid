@@ -1,12 +1,10 @@
-"""Sidebar fragment: user info, scanner controls, theme toggle, stock universe."""
+"""Sidebar fragment: user info, scanner controls, stock universe."""
 from __future__ import annotations
 
 import streamlit as st
 
 from app.auth import do_logout
-from app.config import COOKIE_THEME
 from app.scanner import load_stocks, save_stocks
-from app.styles.palettes import PALETTES
 
 
 def _save_stock_universe(raw_text: str) -> None:
@@ -25,16 +23,8 @@ def _save_stock_universe(raw_text: str) -> None:
     st.success(f"✅ Saved {len(cleaned)} symbols.")
 
 
-def render_sidebar() -> str:
-    """Render the sidebar. Returns the current theme name.
-
-    The theme toggle is the only sidebar control that calls ``st.rerun()``
-    — and it does so only when the theme actually changes. All other
-    interactions (save stocks, reload) are handled inline without rerun
-    to avoid the duplicate-render flash.
-    """
-    p = PALETTES[st.session_state.theme]
-
+def render_sidebar() -> None:
+    """Render the sidebar. No theme toggle — dark mode is always active."""
     with st.sidebar:
         st.markdown("👤 **admin**")
         if st.button("🚪 Logout", width="stretch"):
@@ -53,22 +43,6 @@ def render_sidebar() -> str:
         )
         if st.session_state.last_scan:
             st.caption(f"Last run: {st.session_state.last_scan}")
-
-        st.markdown("### 🎨 Appearance")
-        chosen_theme = st.radio(
-            "Theme", options=["dark", "light"],
-            format_func=lambda x: PALETTES[x]["label"],
-            index=0 if st.session_state.theme == "dark" else 1,
-            horizontal=True, label_visibility="collapsed",
-        )
-        if chosen_theme != st.session_state.theme:
-            st.session_state.theme = chosen_theme
-            try:
-                from app.auth import get_cookie_controller
-                get_cookie_controller().set(COOKIE_THEME, chosen_theme, max_age=365 * 24 * 3600)
-            except Exception:
-                pass
-            st.rerun()
 
         st.markdown("### 🗂️ Stock Universe")
         st.caption("One per line or comma-separated. `.NS` auto-added.")
@@ -90,5 +64,3 @@ def render_sidebar() -> str:
             f'<div class="stock-badge">📋 {len(current_stocks)} symbols</div>',
             unsafe_allow_html=True,
         )
-
-    return st.session_state.theme

@@ -5,7 +5,7 @@ import streamlit as st
 
 from app.auth.cookies import _clear_auth_cookie, _set_auth_cookie, get_cookie_controller
 from app.auth.session import clear_session, save_session
-from app.config import ADMIN_PASSWORD, ADMIN_USERNAME, COOKIE_THEME
+from app.config import ADMIN_PASSWORD, ADMIN_USERNAME
 from app.styles.palettes import Palette
 
 

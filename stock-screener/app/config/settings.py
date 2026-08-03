@@ -15,7 +15,6 @@ SESSION_FILE: Path = APP_DIR / "session.json"
 ADMIN_USERNAME: str = "admin"
 ADMIN_PASSWORD: str = "admin123"
 COOKIE_AUTH: str = "screener_auth_v1"
-COOKIE_THEME: str = "screener_theme_v1"
 COOKIE_TOKEN: str = hashlib.sha256(b"screener_admin_nilesh_2026").hexdigest()
 SESSION_EXPIRY_DAYS: int = 30
 
@@ -31,7 +30,3 @@ DMA_MID: int = 50
 DMA_LONG: int = 200
 CAR_WINDOW: int = 10
 MIN_BARS_REQUIRED: int = 200
-
-# ── Theme ─────────────────────────────────────────────────────────────────────
-DEFAULT_THEME: str = "dark"
-VALID_THEMES: tuple[str, ...] = ("dark", "light")
