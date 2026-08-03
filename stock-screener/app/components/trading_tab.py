@@ -130,8 +130,7 @@ def _render_holdings(holdings: dict, cached_prices: dict, p: Palette) -> None:
         .hide(axis="index")
         .set_table_styles(table_styles(p), overwrite=False)
     )
-    st.dataframe(styled_h, width="stretch",
-                 height=min(80 + len(rows) * 40, 500))
+    st.markdown(styled_h.to_html(), unsafe_allow_html=True)
 
 
 def _render_trade_form(port: dict, my_stocks: list[str], p: Palette) -> None:
@@ -246,8 +245,7 @@ def _render_trade_history(port: dict, p: Palette) -> None:
             .hide(axis="index")
             .set_table_styles(table_styles(p), overwrite=False)
         )
-        st.dataframe(styled_hist, width="stretch",
-                     height=min(80 + len(hist_rows) * 38, 420))
+        st.markdown(styled_hist.to_html(), unsafe_allow_html=True)
         st.download_button(
             label="⬇️ Export Trade History",
             data=hist_df.to_csv(index=False).encode(),
