@@ -70,6 +70,17 @@ toolbarMode = "viewer"
 # instead of a scary red error box.
 showErrorDetails = false
 
+[theme]
+# CRITICAL: Force Streamlit's internal theme to dark. This controls the
+# theme used inside st.dataframe() iframes, st.altair charts, and other
+# embedded components. Without this, the dataframe grid renders white in
+# light mode because the iframe ignores our custom CSS.
+base = "dark"
+primaryColor = "#00d4aa"
+backgroundColor = "#0b1622"
+secondaryBackgroundColor = "#0f2030"
+textColor = "#d0e0f0"
+
 [runner]
 # fastReruns avoids re-computing unchanged fragments on rerun — small but
 # real perf win, especially on mobile where every cycle counts.
