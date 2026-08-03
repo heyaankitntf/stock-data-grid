@@ -132,13 +132,13 @@ html, body, [data-testid="stAppViewContainer"], [data-testid="stMain"] {{
 /* ── Misc ── */
 hr,
 [data-testid="stDivider"] {{
-    border-color:{border} !important; opacity:.6;
+    border-color:{accent} !important; opacity:.6;
 }}
 /* Streamlit's st.divider() renders an <hr> inside a container —
-   override the inline accent color to match the theme border. */
+   override the inline accent color to match the theme accent. */
 [data-testid="stDivider"] > div {{
-    background-color:{border} !important;
-    border-top-color:{border} !important;
+    background-color:{accent} !important;
+    border-top-color:{accent} !important;
 }}
 [data-testid="stAlert"] {{
     border-radius:10px !important; background:{bg3} !important;
