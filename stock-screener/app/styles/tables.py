@@ -1,29 +1,15 @@
-"""Reusable pandas-Styler table styles for dark/light themes.
+"""Reusable pandas-Styler table styles for dark-only theme.
 
 Why this exists
 ---------------
-Streamlit's ``st.dataframe()`` renders the table inside an ``<iframe>``.
-CSS injected via ``st.markdown(..., unsafe_allow_html=True)`` in the parent
-document **cannot reach inside that iframe** — so per-theme CSS in
-``app/styles/css.py`` won't style the table cells.
+Tables are rendered via ``st.markdown(html, unsafe_allow_html=True)`` using
+the pandas Styler's ``.to_html()`` output. This avoids the ``st.dataframe()``
+iframe problem where Streamlit's internal theme (light/dark) takes over and
+ignores our custom dark palette.
 
-On mobile browsers (especially Chrome on Android with dark mode enabled),
-the browser applies its OWN dark-theme heuristics to iframe content that
-doesn't explicitly opt out. The result: white table cells on a dark app
-background, exactly the bug reported on phones.
-
-Two-pronged fix
----------------
-1. ``color-scheme: <dark|light>`` on ``<html>`` (set in ``bootstrap.py``)
-   tells the browser "this page is already themed, don't auto-dark-mode
-   my iframes".
-
-2. ``pandas.io.formats.style.Styler.set_table_styles()`` bakes the dark
-   colours directly into the table's inline ``<style>`` block, so they
-   survive cross-iframe regardless of what the browser does.
-
-This module provides the second part. Use it on every ``st.dataframe()``
-call by chaining ``.set_table_styles(table_styles(p))`` on your Styler.
+The Styler's ``set_table_styles()`` bakes the dark colours directly into the
+table's inline ``<style>`` block, so they always render correctly regardless
+of the browser or OS theme.
 """
 from __future__ import annotations
 
@@ -33,23 +19,35 @@ from app.styles.palettes import Palette
 
 
 def table_styles(p: Palette) -> list[dict]:
-    """Return a ``set_table_styles()``-compatible style list for a palette.
+    """Return a ``set_table_styles()``-compatible style list for the dark palette.
 
-    Styles every part of the table that mobile Chrome was painting white:
-      - the table itself (background, text colour, border)
+    Styles every part of the table so it always looks dark:
+      - the table itself (background, text colour, border, border-radius)
       - headers (``<th>``)
       - data cells (``<td>``)
-      - the index column (the leftmost 0,1,2,... column)
       - hover state (subtle highlight)
-      - selected row state
     """
-    # Pick a slightly lighter shade of bg for hover, falls back to bg2.
     hover_bg = p.get("bg3", p["bg2"])
 
     return [
         # ── Table-wide ───────────────────────────────────────────────────
         {
-            "selector": "table, thead, tbody, tr, th, td",
+            "selector": "table",
+            "props": [
+                ("background-color", p["bg2"]),
+                ("color", p["text"]),
+                ("border-color", p["border"]),
+                ("border-collapse", "collapse"),
+                ("width", "100%"),
+                ("border-radius", "10px"),
+                ("overflow", "hidden"),
+                ("font-size", "0.88rem"),
+                ("margin", "0"),
+            ],
+        },
+        # ── All cells ───────────────────────────────────────────────────
+        {
+            "selector": "thead, tbody, tr, th, td",
             "props": [
                 ("background-color", p["bg2"]),
                 ("color", p["text"]),
@@ -65,6 +63,7 @@ def table_styles(p: Palette) -> list[dict]:
                 ("font-weight", "700"),
                 ("border-bottom", f"2px solid {p['border']}"),
                 ("text-align", "left"),
+                ("padding", "10px 12px"),
             ],
         },
         # ── Data cells ───────────────────────────────────────────────────
@@ -74,6 +73,7 @@ def table_styles(p: Palette) -> list[dict]:
                 ("background-color", p["bg2"]),
                 ("color", p["text"]),
                 ("border-top", f"1px solid {p['border']}"),
+                ("padding", "8px 12px"),
             ],
         },
         # ── Index column (row numbers) ──────────────────────────────────
@@ -84,6 +84,7 @@ def table_styles(p: Palette) -> list[dict]:
                 ("color", p["text_muted"]),
                 ("font-weight", "600"),
                 ("border-right", f"1px solid {p['border']}"),
+                ("padding", "8px 12px"),
             ],
         },
         # ── Hover state (desktop) ───────────────────────────────────────
@@ -110,20 +111,15 @@ def table_styles(p: Palette) -> list[dict]:
                 ("padding-top", "0.5rem"),
             ],
         },
-        # ── Cell text alignment override (numbers right-aligned) ────────
-        {
-            "selector": "tbody td.text-right, th.text-right",
-            "props": [("text-align", "right")],
-        },
     ]
 
 
 def apply_dark_table(styler: pd.io.formats.style.Styler, p: Palette) -> pd.io.formats.style.Styler:
-    """Apply theme-aware table styles to a pandas Styler.
+    """Apply dark table styles to a pandas Styler.
 
     Usage:
         styled = df.style.format({...}).hide(axis="index")
-        st.dataframe(apply_dark_table(styled, p), ...)
+        st.markdown(apply_dark_table(styled, p).to_html(), unsafe_allow_html=True)
 
     This is idempotent and safe to chain with other Styler methods.
     """
