@@ -1,0 +1,22 @@
+# ── Stock Data Grid – Python dependencies ─────────────────────────────────────
+# Install:  pip install -r requirements.txt
+# Python:   >=3.11
+
+# Web framework
+streamlit>=1.35.0,<2.0.0
+
+# Market data (NSE tickers via Yahoo Finance)
+yfinance>=0.2.40,<1.0.0
+
+# Dataframes & numerics
+pandas>=2.1.0,<3.0.0
+numpy>=1.26.0,<3.0.0
+
+# Excel I/O (pandas openpyxl engine; kept for future use)
+openpyxl>=3.1.0,<4.0.0
+
+# Interactive charts (bundled with streamlit; used by st.plotly_chart)
+plotly>=5.20.0,<7.0.0
+
+# Auth / cookie persistence (theme + auth token)
+streamlit-cookies-controller>=0.0.4,<1.0.0
