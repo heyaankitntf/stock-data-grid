@@ -140,6 +140,11 @@ hr,
     background-color:{accent} !important;
     border-top-color:{accent} !important;
 }}
+/* Override Streamlit's default red selection indicator (rgb(255,75,75))
+   to match the theme accent green. */
+[class*="st-emotion-cache"][data-selected] .react-aria-SelectionIndicator {{
+    background-color:{accent} !important;
+}}
 [data-testid="stAlert"] {{
     border-radius:10px !important; background:{bg3} !important;
     border-color:{border} !important; color:{text} !important;
