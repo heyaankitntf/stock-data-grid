@@ -56,8 +56,6 @@ def render_sidebar() -> str:
         if st.session_state.last_scan:
             st.caption(f"Last run: {st.session_state.last_scan}")
 
-        st.divider()
-
         st.markdown("### 🎨 Appearance")
         chosen_theme = st.radio(
             "Theme", options=["dark", "light"],
