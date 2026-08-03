@@ -15,6 +15,13 @@ from app.styles.palettes import Palette
 
 _CSS_TEMPLATE = """
 <style>
+/* ── Force dark color-scheme on everything ──────────────────────────────── */
+/* Prevents browsers from applying light-mode heuristics to iframes,
+   especially Chrome on Android which auto-dark-modes unstyled content. */
+:root, html, body {{
+    color-scheme: dark !important;
+}}
+
 /* ── Global ── */
 html, body, [data-testid="stAppViewContainer"], [data-testid="stMain"] {{
     background-color: {bg} !important; color: {text} !important;
@@ -127,6 +134,18 @@ html, body, [data-testid="stAppViewContainer"], [data-testid="stMain"] {{
 [data-testid="stDataFrame"] {{ border-radius:10px; overflow:hidden; }}
 @media (max-width:768px) {{
     [data-testid="stDataFrame"] > div {{ overflow-x:auto !important; }}
+}}
+/* Force dark theme on ALL dataframe iframes so the table grid never
+   shows white/light backgrounds regardless of system theme. */
+[data-testid="stDataFrame"] iframe {{
+    background-color: {bg2} !important;
+}}
+[data-testid="stDataFrame"] [data-testid="stDataFrameResizable"] {{
+    background-color: {bg2} !important;
+}}
+/* Target the inner scrollable container of the dataframe */
+[data-testid="stDataFrame"] .stDataFrame {{
+    background-color: {bg2} !important;
 }}
 
 /* ── Dividers ── */

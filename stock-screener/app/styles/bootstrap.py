@@ -24,6 +24,13 @@ import streamlit as st
 
 _CRITICAL_CSS = """
 <style>
+/* ── Force dark color-scheme everywhere ──────────────────────────────────── */
+/* Prevents the browser from applying light-mode heuristics to iframes
+   (especially the st.dataframe iframe). */
+:root, html, body {
+    color-scheme: dark !important;
+}
+
 /* ── Dark palette variables (always active) ──────────────────────────────── */
 :root {
     --sdg-bg: #0b1622;
