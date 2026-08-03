@@ -1,8 +1,8 @@
-"""Full decorative stylesheet, applied per-theme.
+"""Full decorative stylesheet for the dark-only palette.
 
 Critical layout-stabilising CSS (body background, button min-height, metric
 container padding, etc.) is already applied by ``bootstrap.py`` which runs
-*before* this function. This module adds the palette-specific decorations
+*before* this function. This module adds the decorative styles
 (gradients, borders, colours) that are safe to apply slightly later because
 they don't change element dimensions.
 """
@@ -129,13 +129,11 @@ html, body, [data-testid="stAppViewContainer"], [data-testid="stMain"] {{
     [data-testid="stDataFrame"] > div {{ overflow-x:auto !important; }}
 }}
 
-/* ── Misc ── */
+/* ── Dividers ── */
 hr,
 [data-testid="stDivider"] {{
     border-color:{accent} !important; opacity:.6;
 }}
-/* Streamlit's st.divider() renders an <hr> inside a container —
-   override the inline accent color to match the theme accent. */
 [data-testid="stDivider"] > div {{
     background-color:{accent} !important;
     border-top-color:{accent} !important;
@@ -145,6 +143,8 @@ hr,
 [class*="st-emotion-cache"][data-selected] .react-aria-SelectionIndicator {{
     background-color:{accent} !important;
 }}
+
+/* ── Misc ── */
 [data-testid="stAlert"] {{
     border-radius:10px !important; background:{bg3} !important;
     border-color:{border} !important; color:{text} !important;
@@ -167,7 +167,7 @@ hr,
 
 
 def inject_theme_css(p: Palette) -> None:
-    """Inject the full per-theme stylesheet. Safe to call on every rerun."""
+    """Inject the dark-only stylesheet. Safe to call on every rerun."""
     st.markdown(
         _CSS_TEMPLATE.format(**p),
         unsafe_allow_html=True,
