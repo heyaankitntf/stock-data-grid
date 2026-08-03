@@ -56,7 +56,7 @@ def _render_results(df: pd.DataFrame, my_stocks: list[str], p: Palette) -> None:
     st.markdown(f"### 🟢 Breakout Stocks — {n} found")
     st.caption("Sorted by distance from 200 DMA · closest first")
     styled = style_breakout_df(df, p)
-    st.markdown(styled.to_html(), unsafe_allow_html=True)
+    st.dataframe(styled, width="stretch", height=min(80 + n * 38, 680))
     st.download_button(
         label="⬇️  Download Excel", data=_to_excel(df),
         file_name=f"Breakout_Stocks_{datetime.now().strftime('%d-%m-%Y')}.xlsx",
