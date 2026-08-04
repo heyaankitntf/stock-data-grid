@@ -97,7 +97,9 @@
     "WBD",
     "WDAY",
     "WDC",
+    "UPWK",
     "XEL",
-    "UPWK"
+    "NOW",
+    "CRM"
   ]
 }
