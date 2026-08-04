@@ -30,6 +30,7 @@ ENV/
 # Local data — the entrypoint seeds these from a template at first boot,
 # so don't ship host-specific copies in the image.
 portfolio.json
+portfolio_us.json
 session.json
 
 # Docker-adjacent files (no need to ship inside the image)

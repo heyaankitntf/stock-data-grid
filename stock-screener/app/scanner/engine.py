@@ -25,9 +25,10 @@ from app.config import (
     SCAN_INTERVAL,
     SCAN_PERIOD,
 )
+from app.market import market_currency, ticker_display, now_tz
 
 
-def scan_stock(ticker: str) -> dict | None:
+def scan_stock(ticker: str, market: str = "NSE") -> dict | None:
     """Scan a single ticker. Returns a result row dict, or None if no breakout."""
     try:
         data = yf.download(ticker, period=SCAN_PERIOD, interval=SCAN_INTERVAL, progress=False)
@@ -45,10 +46,11 @@ def scan_stock(ticker: str) -> dict | None:
             return None
         car_rising = car_data.expanding().mean().tail(CAR_WINDOW).is_monotonic_increasing
         if cmp > dma_30 and cmp > dma_50 and cmp > dma_200 and car_rising:
+            cur = market_currency(market)
             return {
-                "Date": datetime.now().strftime("%d-%m-%Y"),
-                "Stock": ticker.replace(".NS", ""),
-                "CMP (₹)": round(float(cmp), 2),
+                "Date": now_tz(market).strftime("%d-%m-%Y"),
+                "Stock": ticker_display(ticker, market),
+                f"CMP ({cur})": round(float(cmp), 2),
                 "30 DMA": round(float(dma_30), 2),
                 "50 DMA": round(float(dma_50), 2),
                 "200 DMA": round(float(dma_200), 2),
@@ -61,7 +63,7 @@ def scan_stock(ticker: str) -> dict | None:
     return None
 
 
-def run_scanner(ticker_list: list[str], pbar, status) -> pd.DataFrame:
+def run_scanner(ticker_list: list[str], pbar, status, market: str = "NSE") -> pd.DataFrame:
     """Scan all tickers sequentially, updating ``pbar`` / ``status`` as we go.
 
     Sequential scanning is used instead of ThreadPoolExecutor because yfinance
@@ -74,9 +76,9 @@ def run_scanner(ticker_list: list[str], pbar, status) -> pd.DataFrame:
     total = len(ticker_list)
 
     for i, ticker in enumerate(ticker_list, 1):
-        status.caption(f"Scanning {ticker.replace('.NS','')} ({i}/{total})…")
+        status.caption(f"Scanning {ticker_display(ticker, market)} ({i}/{total})…")
         pbar.progress(i / total)
-        row = scan_stock(ticker)
+        row = scan_stock(ticker, market=market)
         if row:
             results.append(row)
         # Small delay to avoid Yahoo Finance rate-limiting

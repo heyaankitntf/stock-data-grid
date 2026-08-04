@@ -181,6 +181,45 @@ hr,
     margin-top:2.5rem; padding-top:1rem; border-top:1px solid {footer_border};
 }}
 [data-testid="stRadio"] label {{ color:{text} !important; }}
+
+/* ── Index widget ── */
+.index-widget {{
+    display:flex; flex-direction:column; align-items:flex-end;
+    justify-content:center; min-width:160px;
+}}
+.index-widget .idx-name {{
+    font-size:.72rem; font-weight:700; letter-spacing:.8px;
+    color:rgba(255,255,255,.55); text-transform:uppercase; margin-bottom:.15rem;
+}}
+.index-widget .idx-price {{
+    font-size:1.35rem; font-weight:800; color:#fff; line-height:1.1;
+}}
+.index-widget .idx-change-up {{
+    font-size:.82rem; font-weight:700; color:#00e87a;
+    background:rgba(0,232,122,.12); border-radius:5px;
+    padding:2px 8px; margin-top:.2rem; display:inline-block;
+}}
+.index-widget .idx-change-dn {{
+    font-size:.82rem; font-weight:700; color:#ff6b6b;
+    background:rgba(255,107,107,.12); border-radius:5px;
+    padding:2px 8px; margin-top:.2rem; display:inline-block;
+}}
+@media (max-width:600px) {{
+    .index-widget {{ align-items:flex-start; margin-top:.6rem; }}
+    .index-widget .idx-price {{ font-size:1.05rem; }}
+}}
+
+/* ── Market pill ── */
+.market-pill-nse {{
+    display:inline-block; background:#0d3322; color:#00d464;
+    border-radius:20px; padding:3px 14px; font-size:.82rem; font-weight:700;
+    letter-spacing:.5px;
+}}
+.market-pill-us {{
+    display:inline-block; background:#0d1f3c; color:#4db8ff;
+    border-radius:20px; padding:3px 14px; font-size:.82rem; font-weight:700;
+    letter-spacing:.5px;
+}}
 </style>
 """
 

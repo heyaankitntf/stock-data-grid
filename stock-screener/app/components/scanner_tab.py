@@ -27,6 +27,7 @@ import streamlit as st
 
 from app.scanner import load_stocks, run_scanner, style_breakout_df
 from app.styles.palettes import Palette
+from app.market import market_currency
 
 
 def _to_excel(df: pd.DataFrame) -> bytes:
@@ -36,7 +37,7 @@ def _to_excel(df: pd.DataFrame) -> bytes:
     return buf.getvalue()
 
 
-def _render_results(df: pd.DataFrame, my_stocks: list[str], p: Palette) -> None:
+def _render_results(df: pd.DataFrame, my_stocks: list[str], p: Palette, market: str = "NSE") -> None:
     """Render the post-scan results (metrics + table + download)."""
     n     = len(df)
     total = len(my_stocks)
@@ -55,19 +56,19 @@ def _render_results(df: pd.DataFrame, my_stocks: list[str], p: Palette) -> None:
 
     st.markdown(f"### 🟢 Breakout Stocks — {n} found")
     st.caption("Sorted by distance from 200 DMA · closest first")
-    styled = style_breakout_df(df, p)
+    styled = style_breakout_df(df, p, market=market)
     st.dataframe(styled, width="stretch", height=min(80 + n * 38, 680))
     st.download_button(
         label="⬇️  Download Excel", data=_to_excel(df),
         file_name=f"Breakout_Stocks_{datetime.now().strftime('%d-%m-%Y')}.xlsx",
-        mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+        mime="application/vnd.openxmlformats.officedocument.spreadsheetml.sheet",
     )
 
 
 @st.fragment(run_every=None)
-def render_scanner_tab(p: Palette) -> None:
+def render_scanner_tab(p: Palette, market: str = "NSE") -> None:
     """Render the Scanner tab. Wrapped in a fragment to isolate reruns."""
-    my_stocks = load_stocks()
+    my_stocks = load_stocks(market=market)
 
     # Single button with dynamic label. No conditional rendering, no
     # duplicate buttons, no st.rerun() on click.
@@ -93,7 +94,7 @@ def render_scanner_tab(p: Palette) -> None:
             st.markdown(f"#### ⏳ Scanning {len(my_stocks)} stocks — please wait…")
             pbar   = st.progress(0)
             status = st.empty()
-            df     = run_scanner(my_stocks, pbar, status)
+            df     = run_scanner(my_stocks, pbar, status, market=market)
             pbar.progress(1.0)
             status.empty()
             st.session_state.df_results = df
@@ -103,7 +104,7 @@ def render_scanner_tab(p: Palette) -> None:
 
     df = st.session_state.df_results
     if df is not None:
-        _render_results(df, my_stocks, p)
+        _render_results(df, my_stocks, p, market=market)
     # NOTE: the "Open the sidebar..." hint banner is intentionally removed
     # per user request. When there are no cached results and the user
     # hasn't clicked Run, the Run button is the only thing shown — clean

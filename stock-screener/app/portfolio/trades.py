@@ -1,10 +1,10 @@
 """Trade execution logic."""
 from __future__ import annotations
 
-from datetime import datetime
 import uuid
 
 from app.portfolio.store import compute_holdings, load_portfolio, save_portfolio
+from app.market import market_currency, now_tz
 
 
 def execute_trade(
@@ -13,15 +13,17 @@ def execute_trade(
     action: str,
     qty: int,
     price: float,
+    market: str = "NSE",
 ) -> tuple[bool, str]:
     """Execute a BUY or SELL. Returns ``(success, message)``."""
-    port = load_portfolio()
-    holdings = compute_holdings(port["trades"])
+    cur  = market_currency(market)
+    port = load_portfolio(market=market)
+    holdings = compute_holdings(port["trades"], market=market)
     value = qty * price
 
     if action == "BUY":
         if port["balance"] < value:
-            return False, f"Insufficient balance. Need ₹{value:,.0f}, have ₹{port['balance']:,.0f}."
+            return False, f"Insufficient balance. Need {cur}{value:,.0f}, have {cur}{port['balance']:,.0f}."
         port["balance"] -= value
     elif action == "SELL":
         if ticker not in holdings or holdings[ticker]["qty"] < qty:
@@ -39,7 +41,7 @@ def execute_trade(
         "qty":       qty,
         "price":     price,
         "value":     round(value, 2),
-        "timestamp": datetime.now().strftime("%d-%m-%Y %H:%M"),
+        "timestamp": now_tz(market).strftime("%d-%m-%Y %H:%M"),
     })
-    save_portfolio(port)
-    return True, f"{action} {qty} × {stock} @ ₹{price:,.2f} → ₹{value:,.0f}"
+    save_portfolio(port, market=market)
+    return True, f"{action} {qty} × {stock} @ {cur}{price:,.2f} → {cur}{value:,.0f}"
