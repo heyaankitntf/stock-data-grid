@@ -2,21 +2,21 @@
 # docker-entrypoint.sh — runs before streamlit starts.
 #
 # Responsibilities:
-#   1. Wire up /app/data so portfolio.json + session.json persist across
-#      container restarts when a volume is mounted at /app/data.
-#   2. Seed portfolio.json / session.json from a fresh template if the
-#      volume is empty (first boot).
+#   1. Wire up /app/data so portfolio.json + portfolio_us.json + session.json
+#      persist across container restarts when a volume is mounted at /app/data.
+#   2. Seed portfolio.json / portfolio_us.json / session.json from a fresh
+#      template if the volume is empty (first boot).
 #   3. Exec the main CMD (streamlit run ...).
 #
-# portfolio.json and session.json are excluded from the image by
-# .dockerignore, so they never exist as real files in /app/ — only as
-# symlinks into /app/data/.
+# portfolio.json, portfolio_us.json, and session.json are excluded from the
+# image by .dockerignore, so they never exist as real files in /app/ — only
+# as symlinks into /app/data/.
 set -eu
 
 DATA_DIR="/app/data"
 mkdir -p "$DATA_DIR"
 
-for f in portfolio.json session.json; do
+for f in portfolio.json portfolio_us.json session.json; do
     target="/app/$f"
     stored="$DATA_DIR/$f"
 
@@ -34,6 +34,15 @@ for f in portfolio.json session.json; do
 {
   "initial_balance": 1000000,
   "balance": 1000000,
+  "trades": []
+}
+JSON
+                ;;
+            portfolio_us.json)
+                cat > "$stored" <<'JSON'
+{
+  "initial_balance": 100000,
+  "balance": 100000,
   "trades": []
 }
 JSON

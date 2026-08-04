@@ -20,13 +20,14 @@ Architecture (industry-standard modular layout):
             session.py          ← file-based session token
             cookies.py          ← CookieController singleton
             login.py            ← login form + do_login/do_logout
+        market.py               ← market context helpers (currency, suffix, index)
         portfolio/
             __init__.py
             store.py            ← JSON-backed portfolio + holdings calc
             trades.py           ← execute_trade()
         scanner/
             __init__.py
-            universe.py         ← settings.json stock list
+            universe.py         ← settings.json / us_stocks.json stock list
             engine.py           ← yfinance scan + sequential runner
             styling.py          ← dataframe colour-banding
         trading/
@@ -64,7 +65,7 @@ st.set_page_config(
 
 # ── 1. Critical FOUC bootstrap (dark palette CSS vars) ───────────────────────
 from app.styles import inject_critical_bootstrap, inject_theme_css, get_palette
-from app.auth import is_authenticated, render_login_page, do_logout
+from app.auth import is_authenticated, render_login_page, do_logout, get_cookie_controller
 
 inject_critical_bootstrap()
 
@@ -88,25 +89,41 @@ for k, v in [("df_results", None), ("last_scan", None), ("scanned", False),
         st.session_state[k] = v
 
 
-# ── 5. Sidebar ───────────────────────────────────────────────────────────────
+# ── 5. Market state management ──────────────────────────────────────────────
+from app.config import COOKIE_MARKET
+from app.market import market_currency
+
+cookies = get_cookie_controller()
+
+if "market" not in st.session_state:
+    try:
+        saved_market = cookies.get(COOKIE_MARKET)
+    except Exception:
+        saved_market = None
+    st.session_state.market = saved_market if saved_market in ("NSE", "US") else "NSE"
+
+MARKET = st.session_state.market
+
+
+# ── 6. Sidebar ───────────────────────────────────────────────────────────────
 from app.components import render_sidebar, render_hero, render_scanner_tab, render_trading_tab
 
-render_sidebar()
+render_sidebar(cookies=cookies)
 
 
-# ── 6. Main content: hero + tabs ─────────────────────────────────────────────
-render_hero()
+# ── 7. Main content: hero + tabs ─────────────────────────────────────────────
+render_hero(market=MARKET)
 
 tab_scanner, tab_trading = st.tabs(["📊 Scanner", "💼 Mock Trading"])
 
 with tab_scanner:
-    render_scanner_tab(P)
+    render_scanner_tab(P, market=MARKET)
 
 with tab_trading:
-    render_trading_tab(P)
+    render_trading_tab(P, market=MARKET)
 
 
-# ── 7. Footer ────────────────────────────────────────────────────────────────
+# ── 8. Footer ────────────────────────────────────────────────────────────────
 st.markdown(
     '<div class="footer">Data via Yahoo Finance · Mock trading only · Not financial advice · Educational use</div>',
     unsafe_allow_html=True,
